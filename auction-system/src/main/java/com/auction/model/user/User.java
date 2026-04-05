@@ -1,4 +1,6 @@
-package com.auction.model;
+package com.auction.model.user;
+
+import com.auction.model.Entity;
 
 public abstract class User extends Entity {
     protected String username;
