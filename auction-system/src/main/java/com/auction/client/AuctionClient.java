@@ -1,64 +1,81 @@
 package com.auction.client;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.Scanner;
 
 public class AuctionClient {
+    private static final String SERVER_HOST = "localhost";
+    private static final int SERVER_PORT = 5000;
+    private static final String REGISTER_OPTION = "1";
+    private static final String LOGIN_OPTION = "2";
+    private static final String EXIT_OPTION = "0";
+    private static final String REGISTER_COMMAND = "REGISTER";
+    private static final String LOGIN_COMMAND = "LOGIN";
+    private static final String COMMAND_SEPARATOR = "|";
+
     public static void main(String[] args) {
-        try(
-            Socket socket = new Socket("localhost", 5000);
-            Scanner sc = new Scanner(System.in);
+        try (
+            Socket socket = new Socket(SERVER_HOST, SERVER_PORT);
+            Scanner scanner = new Scanner(System.in);
             PrintWriter output = new PrintWriter(socket.getOutputStream(), true);
             BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()))
         ) {
-            System.out.println("DA KET NOI DEN SERVER DAU GIA");
+            System.out.println("Connected to auction server");
             boolean running = true;
 
-            while(running){
-                String choice = sc.nextLine();
+            while (running) {
+                String choice = scanner.nextLine();
 
                 switch (choice) {
-                    case "1":
-                        System.out.print("Xu ly dang ky\nNhap username: ");
-                        String regUser = sc.nextLine();
-                        System.out.print("Nhap mat khau: ");
-                        String regPass = sc.nextLine();
-                        System.out.print("Xac nhan mat khau: ");
-                        String regConf = sc.nextLine();
-                        System.out.print("Nhap vai tro BIDDER/SELLER/ADMIN: ");
-                        String regRole = sc.nextLine();
-
-                        output.println("REGISTER|" + regUser + "|" + regPass + "|" + regConf + "|" + regRole);
-                        System.out.println("Server phản hồi: " + reader.readLine());
+                    case REGISTER_OPTION:
+                        handleRegistration(scanner, output, reader);
                         break;
 
-                    case "2":
-                        System.out.print("Xu ly dang nhap\nNhap username: ");
-                        String logUser = sc.nextLine();
-                        System.out.print("Nhap mat khau: ");
-                        String logPass = sc.nextLine();
-                        
-                        output.println("LOGIN|" + logUser + "|" + logPass);
-                        System.out.println("Server phản hồi: " + reader.readLine());
+                    case LOGIN_OPTION:
+                        handleLogin(scanner, output, reader);
                         break;
 
-                    case "0":
+                    case EXIT_OPTION:
                         running = false;
-                        System.out.println("exiting...");
+                        System.out.println("Exiting...");
                         break;
-                
+
                     default:
-                        System.out.println("LUA CHON KHONG HOP LE");
+                        System.out.println("Invalid option");
                         break;
                 }
             }
         } catch (Exception e) {
-            System.err.println("loi ket noi " + e.getMessage());
+            System.err.println("Connection error: " + e.getMessage());
         }
     }
 
+    private static void handleRegistration(Scanner scanner, PrintWriter output, BufferedReader reader) throws Exception {
+        System.out.print("Processing registration\nEnter username: ");
+        String username = scanner.nextLine();
+        System.out.print("Enter password: ");
+        String password = scanner.nextLine();
+        System.out.print("Confirm password: ");
+        String confirmPassword = scanner.nextLine();
+        System.out.print("Enter role BIDDER/SELLER/ADMIN: ");
+        String role = scanner.nextLine();
+
+        String message = String.join(COMMAND_SEPARATOR, REGISTER_COMMAND, username, password, confirmPassword, role);
+        output.println(message);
+        System.out.println("Server response: " + reader.readLine());
+    }
+
+    private static void handleLogin(Scanner scanner, PrintWriter output, BufferedReader reader) throws Exception {
+        System.out.print("Processing login\nEnter username: ");
+        String username = scanner.nextLine();
+        System.out.print("Enter password: ");
+        String password = scanner.nextLine();
+
+        String message = String.join(COMMAND_SEPARATOR, LOGIN_COMMAND, username, password);
+        output.println(message);
+        System.out.println("Server response: " + reader.readLine());
+    }
 }

@@ -1,23 +1,37 @@
 package com.auction.repository;
-import com.auction.model.user.User;
 
-import java.util.*;
+import com.auction.model.user.User;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * In-memory implementation of UserRepository using HashMap for storage.
+ * Provides CRUD operations for User entities.
+ */
 public class InMemoryUserRepository implements UserRepository {
 
-    private Map<Integer, User> userMap = new HashMap<>();
-    private AtomicInteger idGenerator = new AtomicInteger(0);
+    private final Map<Integer, User> userMap = new HashMap<>();
+    private final AtomicInteger idGenerator = new AtomicInteger(0);
 
-    // SAVE (insert + update)
+    /**
+     * Saves a user (insert or update).
+     * If the user has no ID, a new one is generated.
+     *
+     * @param user the user to save
+     * @return true if save was successful
+     */
     @Override
     public boolean saveUser(User user) {
+        if (user == null) {
+            return false;
+        }
 
-        // nếu user mới → tạo id
+        User userToSave = user;
         if (user.getId() == 0) {
             int newId = idGenerator.incrementAndGet();
-
-            user = new User(
+            userToSave = new User(
                 newId,
                 user.getUsername(),
                 user.getPassword(),
@@ -25,21 +39,35 @@ public class InMemoryUserRepository implements UserRepository {
             );
         }
 
-        // insert hoặc update đều dùng put
-        userMap.put(user.getId(), user);
+        userMap.put(userToSave.getId(), userToSave);
         return true;
     }
 
-    // FIND BY USERNAME
+    /**
+     * Finds a user by username.
+     *
+     * @param username the username to search for
+     * @return the user if found, null otherwise
+     */
     @Override
     public User findByUsername(String username) {
-        for (User user : userMap.values()) {
-            if (user.getUsername().equals(username)) {
-                return user;
-            }
+        if (username == null || username.isBlank()) {
+            return null;
         }
-        return null;
+
+        return userMap.values().stream()
+            .filter(user -> user.getUsername().equals(username))
+            .findFirst()
+            .orElse(null);
     }
 
-    // FIND BY ID
+    /**
+     * Finds a user by ID.
+     *
+     * @param id the user ID
+     * @return the user if found, null otherwise
+     */
+    public User findById(int id) {
+        return userMap.get(id);
+    }
 }
