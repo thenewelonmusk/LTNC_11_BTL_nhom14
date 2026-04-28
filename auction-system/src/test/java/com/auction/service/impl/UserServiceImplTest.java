@@ -8,7 +8,6 @@ import com.auction.dto.RegisterRequest;
 import com.auction.dto.RegisterResponse;
 import com.auction.model.user.User;
 import com.auction.repository.UserRepository;
-import com.auction.service.impl.UserServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
