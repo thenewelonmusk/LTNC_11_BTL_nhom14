@@ -1,6 +1,4 @@
-package com.auction.service.imp;
-
-// imports:
+package com.auction.service.impl;
 
 import com.auction.dto.LoginRequest;
 import com.auction.dto.LoginResponse;
