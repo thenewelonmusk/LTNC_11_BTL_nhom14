@@ -39,6 +39,9 @@ public class Auction extends Entity {
         return true;
     }
 
+    public LocalDateTime getEndTime() { return endTime; }
+    public LocalDateTime setEndTime(LocalDateTime newEndTime) {this.endTime = newEndTime;}
+
     public void start() {
         this.status = AuctionStatus.RUNNING;
     }
