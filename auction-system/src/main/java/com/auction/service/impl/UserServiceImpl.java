@@ -85,7 +85,7 @@ public class UserServiceImpl implements UserService {
         }
 
         // Create and save new user
-        User newUser = new User(0, request.getUsername(), request.getPassword(), request.getRole());
+        User newUser = new User(null, request.getUsername(), request.getPassword(), request.getRole());
         boolean isSaved = userRepository.saveUser(newUser);
 
         if (isSaved) {

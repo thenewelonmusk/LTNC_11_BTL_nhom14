@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/LTNC_11_BTL_nhom14.iml" filepath="$PROJECT_DIR$/.idea/LTNC_11_BTL_nhom14.iml" />
+      <module fileurl="file://$PROJECT_DIR$/auction-system/auction-system.iml" filepath="$PROJECT_DIR$/auction-system/auction-system.iml" />
     </modules>
   </component>
 </project>

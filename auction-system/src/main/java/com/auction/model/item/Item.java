@@ -6,17 +6,27 @@ public abstract class Item extends Entity {
     protected String name;
     protected String description;
     protected double startingPrice;
+    protected Long sellerId;
 
-    public Item(int id, String name, String description, double startingPrice) {
+    protected Item() {super();}
+
+    public Item(Long id, String name, String description, double startingPrice, Long sellerId) {
         super(id);
         this.name = name;
         this.description = description;
         this.startingPrice = startingPrice;
     }
 
-    public double getStartingPrice() {
-        return startingPrice;
-    }
+    public String getName() {return name;}
+    public String getDescription() {return description;}
+    public double getStartingPrice() {return startingPrice;}
+    public Long getSellerId() {return sellerId;}
+
+    public void setName(String name) {this.name = name;}
+    public void setDescription(String description) {this.description = description;}
+    public void setStartingPrice(double startingPrice) {this.startingPrice = startingPrice;}
+    public void setSellerId(Long sellerId) {this.sellerId = sellerId;}
 
     public abstract String getType();
+    public abstract void getInfo();
 }

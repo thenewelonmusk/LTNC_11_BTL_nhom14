@@ -1,13 +1,14 @@
 package com.auction.model;
 
 public abstract class Entity {
-    protected int id;
+    protected Long id;
 
-    public Entity(int id) {
+    protected Entity() {}
+
+    protected Entity(Long id) {
         this.id = id;
     }
 
-    public int getId() {
-        return id;
-    }
+    public Long getId() {return id;}
+    public void setId(Long id) {this.id = id;}
 }

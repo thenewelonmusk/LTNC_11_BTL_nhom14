@@ -11,7 +11,7 @@ import java.util.Map;
 import static java.time.LocalDateTime.now;
 
 public class AuctionService {
-    private Map<Integer, Auction> auctionMap;
+    private Map<Long, Auction> auctionMap;
     private static final long SNIPING_THRESHOLD = 30;
     private static final long EXTENSION_SECONDS = 60;
 
@@ -35,7 +35,7 @@ public class AuctionService {
         return auctionMap.get(id);
     }
 
-    public boolean updateAuction(int id, Auction newAuctionData) {
+    public boolean updateAuction(Long id, Auction newAuctionData) {
         if (auctionMap.containsKey(id)) {
             auctionMap.put(id,newAuctionData);
             return true;
