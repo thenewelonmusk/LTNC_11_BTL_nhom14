@@ -3,7 +3,6 @@ package com.auction.repository;
 import com.auction.model.user.User;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
