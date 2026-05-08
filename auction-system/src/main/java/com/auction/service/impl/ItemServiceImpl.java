@@ -18,7 +18,6 @@ public class ItemServiceImpl implements ItemService {
     private static final String ERROR_NOT_OWNER = "Bạn không phải chủ sản phẩm này.";
     private static final String ERROR_SAVE_FAILED = "Lỗi hệ thống, không thể lưu.";
     private static final String ERROR_DELETE_FAILED = "Không thể xóa sản phẩm.";
-    private static final String ERROR_CATEGORY_EMPTY = "Loại sản phẩm trống.";
 
     // Success messages
     private static final String SUCCESS_CREATE = "Tạo sản phẩm thành công.";
