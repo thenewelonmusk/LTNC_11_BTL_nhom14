@@ -3,7 +3,7 @@ package com.auction.repository;
 import com.auction.model.user.User;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class InMemoryUserRepository implements UserRepository {
 
-    private final Map<Integer, User> userMap = new HashMap<>();
+    private final Map<Integer, User> userMap = new ConcurrentHashMap<>();
     private final AtomicInteger idGenerator = new AtomicInteger(0);
 
     /**

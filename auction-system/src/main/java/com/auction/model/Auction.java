@@ -54,4 +54,20 @@ public class Auction extends Entity {
     public Bidder getHighestBidder() {
         return highestBidder;
     }
+
+    public Item getItem() {
+        return item;
+    }
+
+    public Seller getSeller() {
+        return seller;
+    }
+
+    public LocalDateTime getStartTime() {
+        return startTime;
+    }
+
+    public LocalDateTime getEndTime() {
+        return endTime;
+    }
 }
