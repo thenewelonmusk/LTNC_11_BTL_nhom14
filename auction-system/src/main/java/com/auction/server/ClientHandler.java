@@ -19,9 +19,11 @@ import java.net.Socket;
 public class ClientHandler implements Runnable {
     public static final String REGISTER_COMMAND = "REGISTER";
     public static final String LOGIN_COMMAND = "LOGIN";
+    public static final String BID_COMMAND = "BID";
     public static final String COMMAND_SEPARATOR = "\\|";
     public static final int REGISTER_PARTS = 5;
     public static final int LOGIN_PARTS = 3;
+    public static final int BID_PARTS = 4;
     
     private static final String SUCCESS_RESPONSE = "SUCCESS";
     private static final String FAIL_RESPONSE = "FAIL";
@@ -75,7 +77,8 @@ public class ClientHandler implements Runnable {
             handleRegister(parts, output);
         } else if (LOGIN_COMMAND.equals(action) && parts.length == LOGIN_PARTS) {
             handleLogin(parts, output);
-        } else {
+        }
+        else {
             sendResponse(output, false, "Invalid request");
         }
     }
@@ -116,4 +119,5 @@ public class ClientHandler implements Runnable {
         String response = status + RESPONSE_SEPARATOR + (message != null ? message : "");
         output.println(response);
     }
+
 }
