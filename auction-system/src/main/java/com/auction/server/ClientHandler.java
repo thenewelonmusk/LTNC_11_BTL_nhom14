@@ -6,6 +6,7 @@ import com.auction.dto.RegisterRequest;
 import com.auction.dto.RegisterResponse;
 import com.auction.service.UserService;
 
+import com.google.gson.Gson;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -44,6 +45,7 @@ public class ClientHandler implements Runnable {
             PrintWriter output = new PrintWriter(socket.getOutputStream(), true)
         ) {
             String requestLine;
+
             while ((requestLine = reader.readLine()) != null) {
                 processRequest(requestLine, output);
             }
