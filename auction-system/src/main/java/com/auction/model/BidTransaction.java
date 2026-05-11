@@ -4,29 +4,31 @@ import com.auction.model.user.Bidder;
 
 import java.time.LocalDateTime;
 
-public class BidTransaction {
+public class BidTransaction extends Entity{
+    private Long auctionId;
+    private Long bidderId;
     private double amount;
-    private Bidder bidder;
-    private LocalDateTime time;
+    private LocalDateTime bidTime;
+    private boolean autoBid;
 
-    public BidTransaction(double amount, Bidder bidder) {
-        if (amount <= 0) {
-            throw new IllegalArgumentException("Invalid bid amount");
-        }
-        this.amount = amount;
-        this.bidder = bidder;
-        this.time = LocalDateTime.now();
+    public BidTransaction() {
+        super();
+        this.bidTime = LocalDateTime.now();
+        this.autoBid = false;
     }
 
-    public double getAmount() {
-        return amount;
-    }
+    public Long getAuctionId() {return auctionId;}
+    public void setAuctionId(Long auctionId) {this.auctionId = auctionId;}
 
-    public Bidder getBidder() {
-        return bidder;
-    }
+    public Long getBidderId() {return bidderId;}
+    public void setBidderId(Long bidderId) {this.bidderId = bidderId;}
 
-    public LocalDateTime getTime() {
-        return time;
-    }
+    public double getAmount() {return amount;}
+    public void setAmount(double amount) {this.amount = amount;}
+
+    public LocalDateTime getBidTime() {return bidTime;}
+    public void setBidTime(LocalDateTime bidTime) {this.bidTime = bidTime;}
+
+    public boolean isAutoBid() {return autoBid;}
+    public void setAutoBid(boolean autoBid) {this.autoBid = autoBid;}
 }

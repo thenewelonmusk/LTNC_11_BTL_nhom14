@@ -1,56 +1,47 @@
 package com.auction.model;
 
-import com.auction.model.item.Item;
-import com.auction.model.user.Bidder;
-import com.auction.model.user.Seller;
-
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 public class Auction extends Entity {
-    private Item item;
-    private Seller seller;
-    private List<BidTransaction> bids;
-    private double currentPrice;
-    private Bidder highestBidder;
-    private LocalDateTime startTime;
-    private LocalDateTime endTime;
-    private AuctionStatus status;
+   private Long itemId;
+   private Long sellerId;
+   private double startingPrice;
+   private double currentPrice;
+   private LocalDateTime startTime;
+   private LocalDateTime endTime;
+   private AuctionStatus status;
+   private Long winnerId;
 
-    public Auction(int id, Item item, Seller seller, LocalDateTime startTime, LocalDateTime endTime) {
-        super(id);
-        this.item = item;
-        this.seller = seller;
-        this.startTime = startTime;
-        this.endTime = endTime;
-        this.bids = new ArrayList<>();
-        this.currentPrice = item.getStartingPrice();
-        this.status = AuctionStatus.OPEN;
-    }
+   public Auction() {
+      super();
+      this.status = AuctionStatus.OPEN;
+   }
 
-    public synchronized boolean placeBid(BidTransaction bid) {
-        if (status != AuctionStatus.RUNNING) return false;
-        if (bid.getAmount() <= currentPrice) return false;
+   public Long getItemId() {return itemId;}
+   public void setItemId(Long itemId) {this.itemId = itemId;}
 
-        bids.add(bid);
-        currentPrice = bid.getAmount();
-        highestBidder = bid.getBidder();
-        return true;
-    }
+   public Long getSellerId() {return sellerId;}
+   public void setSellerId(Long sellerId) {this.sellerId = sellerId;}
 
-    public void start() {
-        this.status = AuctionStatus.RUNNING;
-    }
+   public double getStartingPrice() {return startingPrice;}
+   public void setStartingPrice(double startingPrice) {this.startingPrice = startingPrice;}
 
-    public void finish() {
-        this.status = AuctionStatus.FINISHED;
-    }
+   public double getCurrentPrice() {return currentPrice;}
+   public void setCurrentPrice(double currentPrice) {this.currentPrice = currentPrice;}
 
-    public double getCurrentPrice() {
-        return currentPrice;
-    }
+   public LocalDateTime getStartTime() {return startTime;}
+   public void setStartTime(LocalDateTime startTime) {this.startTime = startTime;}
 
+<<<<<<< HEAD
+   public LocalDateTime getEndTime() {return endTime;}
+   public void setEndTime(LocalDateTime endTime) {this.endTime = endTime;}
+
+   public AuctionStatus getStatus() {return status;}
+   public void setStatus(AuctionStatus status) {this.status = status;}
+
+   public Long getWinnerId() {return winnerId;}
+   public void setWinnerId(Long winnerId) {this.winnerId = winnerId;}
+=======
     public Bidder getHighestBidder() {
         return highestBidder;
     }
@@ -70,4 +61,5 @@ public class Auction extends Entity {
     public LocalDateTime getEndTime() {
         return endTime;
     }
+>>>>>>> test-branch
 }

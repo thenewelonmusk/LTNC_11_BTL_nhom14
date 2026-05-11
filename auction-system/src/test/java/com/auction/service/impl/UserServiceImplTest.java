@@ -30,7 +30,7 @@ class UserServiceImplTest {
     private static final String VALID_PASSWORD = "correctPassword";
     private static final String INVALID_PASSWORD = "wrongPassword";
     private static final String VALID_ROLE = "BIDDER";
-    private static final int VALID_USER_ID = 1;
+    private static final Long VALID_USER_ID = 0L;
 
     // Constants for error messages
     private static final String MISSING_CREDENTIALS_MSG = "Please provide complete credentials.";

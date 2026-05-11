@@ -7,7 +7,7 @@ public class User extends Entity {
     protected String password;
     protected String role;
 
-    public User(int id, String username, String password,String role) {
+    public User(Long id, String username, String password,String role) {
         super(id);
         this.username = username;
         this.password = password;

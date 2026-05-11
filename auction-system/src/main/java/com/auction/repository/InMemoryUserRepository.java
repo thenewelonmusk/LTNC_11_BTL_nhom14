@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * In-memory implementation of UserRepository using HashMap for storage.
@@ -12,8 +13,13 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class InMemoryUserRepository implements UserRepository {
 
+<<<<<<< HEAD
+    private final Map<Long, User> userMap = new HashMap<>();
+    private final AtomicLong idGenerator = new AtomicLong(0);
+=======
     private final Map<Integer, User> userMap = new ConcurrentHashMap<>();
     private final AtomicInteger idGenerator = new AtomicInteger(0);
+>>>>>>> test-branch
 
     /**
      * Saves a user (insert or update).
@@ -29,8 +35,8 @@ public class InMemoryUserRepository implements UserRepository {
         }
 
         User userToSave = user;
-        if (user.getId() == 0) {
-            int newId = idGenerator.incrementAndGet();
+        if (user.getId() == null) {
+            Long newId = idGenerator.incrementAndGet();
             userToSave = new User(
                 newId,
                 user.getUsername(),
