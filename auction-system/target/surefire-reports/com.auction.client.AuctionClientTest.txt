@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: com.auction.client.AuctionClientTest
--------------------------------------------------------------------------------
-Tests run: 14, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.089 s -- in com.auction.client.AuctionClientTest

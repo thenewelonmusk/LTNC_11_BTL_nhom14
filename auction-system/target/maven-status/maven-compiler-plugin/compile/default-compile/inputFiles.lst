@@ -1,4 +1,11 @@
 C:\Projects\BTL\auction-system\src\main\java\com\auction\client\AuctionClient.java
+C:\Projects\BTL\auction-system\src\main\java\com\auction\clientapp\AuctionFrameController.java
+C:\Projects\BTL\auction-system\src\main\java\com\auction\clientapp\ClientApp.java
+C:\Projects\BTL\auction-system\src\main\java\com\auction\clientapp\ControllerForLoginFrame.java
+C:\Projects\BTL\auction-system\src\main\java\com\auction\clientapp\HomePage.java
+C:\Projects\BTL\auction-system\src\main\java\com\auction\clientapp\HomePageController.java
+C:\Projects\BTL\auction-system\src\main\java\com\auction\clientapp\HostingFrameController.java
+C:\Projects\BTL\auction-system\src\main\java\com\auction\clientapp\ItemFrameController.java
 C:\Projects\BTL\auction-system\src\main\java\com\auction\dto\LoginRequest.java
 C:\Projects\BTL\auction-system\src\main\java\com\auction\dto\LoginResponse.java
 C:\Projects\BTL\auction-system\src\main\java\com\auction\dto\RegisterRequest.java
