@@ -9,8 +9,8 @@
     <version>1.0-SNAPSHOT</version>
 
     <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
+        <maven.compiler.release>17</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
     <dependencies>
@@ -29,25 +29,74 @@
 
         <dependency>
             <groupId>org.mockito</groupId>
+<<<<<<< HEAD
             <artifactId>mockito-junit-jupiter</artifactId>
             <version>5.11.0</version>
+=======
+            <artifactId>mockito-core</artifactId>
+            <version>5.14.1</version>
+            <scope>test</scope>
+        </dependency>
+
+       <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
+            <version>5.14.1</version>
+>>>>>>> test-branch
             <scope>test</scope>
         </dependency>
 
         <dependency>
+<<<<<<< HEAD
             <groupId>org.mockito</groupId>
             <artifactId>mockito-junit-jupiter</artifactId>
             <version>5.11.0</version>
+=======
+            <groupId>net.bytebuddy</groupId>
+            <artifactId>byte-buddy</artifactId>
+            <version>1.15.9</version>
+>>>>>>> test-branch
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>8.0.33</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-controls</artifactId>
+            <version>21</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-fxml</artifactId>
+            <version>21</version>
+        </dependency>
+
     </dependencies>
 
     <build>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <release>17</release>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
+                <configuration>
+                    <argLine>-Dnet.bytebuddy.experimental=true</argLine>
+                </configuration>
             </plugin>
 
             <plugin>
@@ -55,6 +104,16 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.4.1</version>
             </plugin>
+
+            <plugin>
+                <groupId>org.openjfx</groupId>
+                <artifactId>javafx-maven-plugin</artifactId>
+                <version>0.0.8</version>
+                <configuration>
+                    <mainClass>com.auction.clientapp.ClientApp</mainClass>
+                </configuration>
+            </plugin>
+
         </plugins>
     </build>
 </project>

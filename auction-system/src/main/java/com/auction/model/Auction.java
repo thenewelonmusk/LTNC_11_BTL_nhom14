@@ -32,6 +32,7 @@ public class Auction extends Entity {
    public LocalDateTime getStartTime() {return startTime;}
    public void setStartTime(LocalDateTime startTime) {this.startTime = startTime;}
 
+<<<<<<< HEAD
    public LocalDateTime getEndTime() {return endTime;}
    public void setEndTime(LocalDateTime endTime) {this.endTime = endTime;}
 
@@ -40,4 +41,25 @@ public class Auction extends Entity {
 
    public Long getWinnerId() {return winnerId;}
    public void setWinnerId(Long winnerId) {this.winnerId = winnerId;}
+=======
+    public Bidder getHighestBidder() {
+        return highestBidder;
+    }
+
+    public Item getItem() {
+        return item;
+    }
+
+    public Seller getSeller() {
+        return seller;
+    }
+
+    public LocalDateTime getStartTime() {
+        return startTime;
+    }
+
+    public LocalDateTime getEndTime() {
+        return endTime;
+    }
+>>>>>>> test-branch
 }

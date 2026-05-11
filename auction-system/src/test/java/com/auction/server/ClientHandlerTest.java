@@ -13,7 +13,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.io.PrintWriter;
-import java.net.Socket;
+import java.io.StringWriter;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -23,20 +23,24 @@ import static org.mockito.Mockito.*;
 class ClientHandlerTest {
 
     @Mock
-    private Socket mockSocket;
-
-    @Mock
     private UserService mockUserService;
 
-    @Mock
-    private PrintWriter mockOutput;
-
+    private StringWriter stringWriter;
+    private PrintWriter output;
     private ClientHandler clientHandler;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        clientHandler = new ClientHandler(mockSocket, mockUserService);
+        // Use real PrintWriter with StringWriter to capture output
+        stringWriter = new StringWriter();
+        output = new PrintWriter(stringWriter);
+        clientHandler = new ClientHandler(null, mockUserService);
+    }
+    
+    private String getOutput() {
+        output.flush();
+        return stringWriter.toString();
     }
 
     @Test
@@ -49,11 +53,11 @@ class ClientHandlerTest {
         when(mockUserService.register(any(RegisterRequest.class))).thenReturn(successResponse);
 
         // Act
-        clientHandler.processRequest(registerRequest, mockOutput);
+        clientHandler.processRequest(registerRequest, output);
 
         // Assert
         verify(mockUserService).register(any(RegisterRequest.class));
-        verify(mockOutput).println("SUCCESS - Registration successful");
+        assertTrue(getOutput().contains("SUCCESS - Registration successful"));
     }
 
     @Test
@@ -61,16 +65,16 @@ class ClientHandlerTest {
     void testProcessValidLoginRequest() {
         // Arrange
         String loginRequest = "LOGIN|testuser|password123";
-        LoginResponse successResponse = new LoginResponse(true, "Login successful");
+        LoginResponse successResponse = new LoginResponse(true, "Login successful", "testuser", "BIDDER");
         
         when(mockUserService.login(any(LoginRequest.class))).thenReturn(successResponse);
 
         // Act
-        clientHandler.processRequest(loginRequest, mockOutput);
+        clientHandler.processRequest(loginRequest, output);
 
         // Assert
         verify(mockUserService).login(any(LoginRequest.class));
-        verify(mockOutput).println("SUCCESS - Login successful");
+        assertTrue(getOutput().contains("SUCCESS - Login successful"));
     }
 
     @Test
@@ -83,10 +87,10 @@ class ClientHandlerTest {
         when(mockUserService.register(any(RegisterRequest.class))).thenReturn(failResponse);
 
         // Act
-        clientHandler.processRequest(registerRequest, mockOutput);
+        clientHandler.processRequest(registerRequest, output);
 
         // Assert
-        verify(mockOutput).println("FAIL - User already exists");
+        assertTrue(getOutput().contains("FAIL - User already exists"));
     }
 
     @Test
@@ -94,15 +98,15 @@ class ClientHandlerTest {
     void testProcessFailedLoginRequest() {
         // Arrange
         String loginRequest = "LOGIN|invaliduser|wrongpass";
-        LoginResponse failResponse = new LoginResponse(false, "Invalid credentials");
+        LoginResponse failResponse = new LoginResponse(false, "Invalid credentials", null, null);
         
         when(mockUserService.login(any(LoginRequest.class))).thenReturn(failResponse);
 
         // Act
-        clientHandler.processRequest(loginRequest, mockOutput);
+        clientHandler.processRequest(loginRequest, output);
 
         // Assert
-        verify(mockOutput).println("FAIL - Invalid credentials");
+        assertTrue(getOutput().contains("FAIL - Invalid credentials"));
     }
 
     @Test
@@ -112,11 +116,11 @@ class ClientHandlerTest {
         String invalidRequest = "REGISTER|user|pass|pass";
 
         // Act
-        clientHandler.processRequest(invalidRequest, mockOutput);
+        clientHandler.processRequest(invalidRequest, output);
 
         // Assert
         verify(mockUserService, never()).register(any());
-        verify(mockOutput).println("FAIL - Invalid request");
+        assertTrue(getOutput().contains("FAIL - Invalid request"));
     }
 
     @Test
@@ -126,11 +130,11 @@ class ClientHandlerTest {
         String invalidRequest = "LOGIN|user|pass|extra";
 
         // Act
-        clientHandler.processRequest(invalidRequest, mockOutput);
+        clientHandler.processRequest(invalidRequest, output);
 
         // Assert
         verify(mockUserService, never()).login(any());
-        verify(mockOutput).println("FAIL - Invalid request");
+        assertTrue(getOutput().contains("FAIL - Invalid request"));
     }
 
     @Test
@@ -140,12 +144,12 @@ class ClientHandlerTest {
         String unknownRequest = "DELETE|user";
 
         // Act
-        clientHandler.processRequest(unknownRequest, mockOutput);
+        clientHandler.processRequest(unknownRequest, output);
 
         // Assert
         verify(mockUserService, never()).register(any());
         verify(mockUserService, never()).login(any());
-        verify(mockOutput).println("FAIL - Invalid request");
+        assertTrue(getOutput().contains("FAIL - Invalid request"));
     }
 
     @Test
@@ -155,20 +159,20 @@ class ClientHandlerTest {
         String emptyRequest = "";
 
         // Act
-        clientHandler.processRequest(emptyRequest, mockOutput);
+        clientHandler.processRequest(emptyRequest, output);
 
         // Assert
-        verify(mockOutput).println("FAIL - Invalid request format");
+        assertTrue(getOutput().contains("FAIL - Invalid request format"));
     }
 
     @Test
     @DisplayName("Should handle null request")
     void testProcessNullRequest() {
         // Act
-        clientHandler.processRequest(null, mockOutput);
+        clientHandler.processRequest(null, output);
 
         // Assert
-        verify(mockOutput).println("FAIL - Invalid request format");
+        assertTrue(getOutput().contains("FAIL - Invalid request format"));
     }
 
     @Test
@@ -181,7 +185,7 @@ class ClientHandlerTest {
         when(mockUserService.register(any(RegisterRequest.class))).thenReturn(response);
 
         // Act
-        clientHandler.processRequest(registerRequest, mockOutput);
+        clientHandler.processRequest(registerRequest, output);
 
         // Assert
         verify(mockUserService).register(any(RegisterRequest.class));
@@ -192,12 +196,12 @@ class ClientHandlerTest {
     void testProcessLowercaseLoginCommand() {
         // Arrange
         String loginRequest = "login|user|pass";
-        LoginResponse response = new LoginResponse(true, "Success");
+        LoginResponse response = new LoginResponse(true, "Success", "user", "BIDDER");
         
         when(mockUserService.login(any(LoginRequest.class))).thenReturn(response);
 
         // Act
-        clientHandler.processRequest(loginRequest, mockOutput);
+        clientHandler.processRequest(loginRequest, output);
 
         // Assert
         verify(mockUserService).login(any(LoginRequest.class));
@@ -215,7 +219,7 @@ class ClientHandlerTest {
         ArgumentCaptor<RegisterRequest> captor = ArgumentCaptor.forClass(RegisterRequest.class);
 
         // Act
-        clientHandler.processRequest(registerRequest, mockOutput);
+        clientHandler.processRequest(registerRequest, output);
 
         // Assert
         verify(mockUserService).register(captor.capture());
@@ -229,14 +233,14 @@ class ClientHandlerTest {
     void testExtractLoginCredentials() {
         // Arrange
         String loginRequest = "LOGIN|john_doe|secret123";
-        LoginResponse response = new LoginResponse(true, "Success");
+        LoginResponse response = new LoginResponse(true, "Success", "john_doe", "ADMIN");
         
         when(mockUserService.login(any(LoginRequest.class))).thenReturn(response);
 
         ArgumentCaptor<LoginRequest> captor = ArgumentCaptor.forClass(LoginRequest.class);
 
         // Act
-        clientHandler.processRequest(loginRequest, mockOutput);
+        clientHandler.processRequest(loginRequest, output);
 
         // Assert
         verify(mockUserService).login(captor.capture());
@@ -254,7 +258,7 @@ class ClientHandlerTest {
             .thenReturn(new RegisterResponse(true, "Success"));
 
         // Act
-        clientHandler.processRequest(registerRequest, mockOutput);
+        clientHandler.processRequest(registerRequest, output);
 
         // Assert
         verify(mockUserService, times(1)).register(any());
@@ -266,10 +270,10 @@ class ClientHandlerTest {
         // Arrange
         String loginRequest = "LOGIN|user|pass";
         when(mockUserService.login(any(LoginRequest.class)))
-            .thenReturn(new LoginResponse(true, "Success"));
+            .thenReturn(new LoginResponse(true, "Success", "user", "BIDDER"));
 
         // Act
-        clientHandler.processRequest(loginRequest, mockOutput);
+        clientHandler.processRequest(loginRequest, output);
 
         // Assert
         verify(mockUserService, times(1)).login(any());
@@ -280,15 +284,15 @@ class ClientHandlerTest {
     void testProcessRequestWithNullMessage() {
         // Arrange
         String loginRequest = "LOGIN|user|pass";
-        LoginResponse response = new LoginResponse(false, null);
+        LoginResponse response = new LoginResponse(false, null, null, null);
         
         when(mockUserService.login(any(LoginRequest.class))).thenReturn(response);
 
         // Act
-        clientHandler.processRequest(loginRequest, mockOutput);
+        clientHandler.processRequest(loginRequest, output);
 
         // Assert
-        verify(mockOutput).println(contains("FAIL"));
+        assertTrue(getOutput().contains("FAIL"));
     }
 
     @Test
@@ -301,10 +305,10 @@ class ClientHandlerTest {
         when(mockUserService.register(any(RegisterRequest.class))).thenReturn(response);
 
         // Act
-        clientHandler.processRequest(registerRequest, mockOutput);
+        clientHandler.processRequest(registerRequest, output);
 
         // Assert
-        verify(mockOutput).println("SUCCESS - User created");
+        assertTrue(getOutput().contains("SUCCESS - User created"));
     }
 
     @Test
@@ -314,10 +318,10 @@ class ClientHandlerTest {
         String request = "  ";
 
         // Act
-        clientHandler.processRequest(request, mockOutput);
+        clientHandler.processRequest(request, output);
 
         // Assert
-        verify(mockOutput).println("FAIL - Invalid request format");
+        assertTrue(getOutput().contains("FAIL - Invalid request format"));
     }
 
     @Test
