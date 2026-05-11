@@ -54,6 +54,18 @@
             <version>8.0.33</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-controls</artifactId>
+            <version>21</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-fxml</artifactId>
+            <version>21</version>
+        </dependency>
+
     </dependencies>
 
     <build>
@@ -81,6 +93,16 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.4.1</version>
             </plugin>
+
+            <plugin>
+                <groupId>org.openjfx</groupId>
+                <artifactId>javafx-maven-plugin</artifactId>
+                <version>0.0.8</version>
+                <configuration>
+                    <mainClass>com.auction.clientapp.ClientApp</mainClass>
+                </configuration>
+            </plugin>
+
         </plugins>
     </build>
 </project>
