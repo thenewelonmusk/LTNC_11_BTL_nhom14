@@ -13,6 +13,7 @@ public class HomePageController {
     private Stage stage;
     private Scene scene;
     private Parent root;
+    
     public void ToAuctionFrame(ActionEvent actionEvent) throws IOException {
         root = FXMLLoader.load(getClass().getResource("AuctionFrame.fxml"));
         stage = (Stage)((Node)actionEvent.getSource()).getScene().getWindow();

@@ -29,10 +29,6 @@
 
         <dependency>
             <groupId>org.mockito</groupId>
-<<<<<<< HEAD
-            <artifactId>mockito-junit-jupiter</artifactId>
-            <version>5.11.0</version>
-=======
             <artifactId>mockito-core</artifactId>
             <version>5.14.1</version>
             <scope>test</scope>
@@ -42,20 +38,13 @@
             <groupId>org.mockito</groupId>
             <artifactId>mockito-junit-jupiter</artifactId>
             <version>5.14.1</version>
->>>>>>> test-branch
             <scope>test</scope>
         </dependency>
 
         <dependency>
-<<<<<<< HEAD
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-junit-jupiter</artifactId>
-            <version>5.11.0</version>
-=======
             <groupId>net.bytebuddy</groupId>
             <artifactId>byte-buddy</artifactId>
             <version>1.15.9</version>
->>>>>>> test-branch
             <scope>test</scope>
         </dependency>
 

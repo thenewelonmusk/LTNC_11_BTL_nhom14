@@ -7,6 +7,7 @@ public class ItemRequest {
     private String description;
     private double startingPrice;
     private String type; // ELECTRONICS | ART | VEHICLE
+    private double currentPrice;
 
     // Electronics
     private String deviceBrand;
@@ -55,4 +56,12 @@ public class ItemRequest {
 
     public int getMileage() {return mileage;}
     public void setMileage(int mileage) {this.mileage = mileage;}
+
+    public double getCurrentPrice(){
+        return currentPrice;
+    }
+
+    public void setCurrentPrice(double currentPrice){
+        this.currentPrice = currentPrice;
+    }
 }

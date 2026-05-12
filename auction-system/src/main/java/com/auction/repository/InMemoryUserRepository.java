@@ -13,13 +13,8 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class InMemoryUserRepository implements UserRepository {
 
-<<<<<<< HEAD
-    private final Map<Long, User> userMap = new HashMap<>();
+    private final Map<Long, User> userMap = new ConcurrentHashMap<>();
     private final AtomicLong idGenerator = new AtomicLong(0);
-=======
-    private final Map<Integer, User> userMap = new ConcurrentHashMap<>();
-    private final AtomicInteger idGenerator = new AtomicInteger(0);
->>>>>>> test-branch
 
     /**
      * Saves a user (insert or update).

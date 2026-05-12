@@ -1,310 +1,116 @@
 package com.auction.service.impl;
 
+import com.auction.dao.UserDAO;
 import com.auction.dto.LoginRequest;
 import com.auction.dto.LoginResponse;
 import com.auction.dto.RegisterRequest;
 import com.auction.dto.RegisterResponse;
-import com.auction.model.user.User;
-import com.auction.repository.UserRepository;
+import com.auction.model.user.Bidder;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.Mockito;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
 
-/**
- * Unit tests for UserServiceImpl.
- * Tests login and registration functionality with various scenarios.
- */
-@DisplayName("UserServiceImpl Tests")
-class UserServiceImplTest {
+public class UserServiceImplTest {
 
-    // Constants for test data
-    private static final String VALID_USERNAME = "testUser";
-    private static final String VALID_PASSWORD = "correctPassword";
-    private static final String INVALID_PASSWORD = "wrongPassword";
-    private static final String VALID_ROLE = "BIDDER";
-    private static final Long VALID_USER_ID = 0L;
-
-    // Constants for error messages
-    private static final String MISSING_CREDENTIALS_MSG = "Please provide complete credentials.";
-    private static final String INVALID_USERNAME_MSG = "Invalid username.";
-    private static final String INVALID_PASSWORD_MSG = "Invalid password.";
-    private static final String USERNAME_EXISTS_MSG = "Username already exists.";
-    private static final String PASSWORD_MISMATCH_MSG = "Passwords do not match.";
-    private static final String SAVE_FAILED_MSG = "System error, unable to save account.";
-    private static final String REGISTRATION_SUCCESS_MSG = "Registration successful.";
-    private static final String LOGIN_SUCCESS_MSG = "Login successful.";
-
-    @Mock
-    private UserRepository userRepository;
-
-    @InjectMocks
-    private UserServiceImpl userService;
-
-    private User testUser;
+    private UserDAO dao;
+    private UserServiceImpl svc;
 
     @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
-        testUser = new User(VALID_USER_ID, VALID_USERNAME, VALID_PASSWORD, VALID_ROLE);
-    }
-
-    // ============ LOGIN TESTS ============
-
-    @Test
-    @DisplayName("Login with empty username should return error")
-    void testLoginEmptyUsername() {
-        // Arrange
-        LoginRequest request = new LoginRequest("", "password");
-
-        // Act
-        LoginResponse response = userService.login(request);
-
-        // Assert
-        assertFalse(response.isSuccess());
-        assertEquals(MISSING_CREDENTIALS_MSG, response.getMessage());
+    public void setup() {
+        dao = mock(UserDAO.class);
+        svc = new UserServiceImpl(dao);
     }
 
     @Test
-    @DisplayName("Login with empty password should return error")
-    void testLoginEmptyPassword() {
-        // Arrange
-        LoginRequest request = new LoginRequest("testuser", "");
-
-        // Act
-        LoginResponse response = userService.login(request);
-
-        // Assert
-        assertFalse(response.isSuccess());
-        assertEquals(MISSING_CREDENTIALS_MSG, response.getMessage());
+    public void testLoginNullReq() {
+        LoginResponse res = svc.login(null);
+        assertFalse(res.isSuccess());
+        assertEquals("Vui lòng nhập đủ thông tin.", res.getMessage());
     }
 
     @Test
-    @DisplayName("Login with empty credentials should return error")
-    void testLoginEmptyCredentials() {
-        // Arrange
-        LoginRequest request = new LoginRequest("", "");
-
-        // Act
-        LoginResponse response = userService.login(request);
-
-        // Assert
-        assertFalse(response.isSuccess());
-        assertEquals(MISSING_CREDENTIALS_MSG, response.getMessage());
+    public void testLoginEmpty() {
+        LoginRequest req = new LoginRequest("", "   ");
+        LoginResponse res = svc.login(req);
+        assertFalse(res.isSuccess());
     }
 
     @Test
-    @DisplayName("Login with non-existent user should return error")
-    void testLoginNonExistentUser() {
-        // Arrange
-        LoginRequest request = new LoginRequest("wrongUser", VALID_PASSWORD);
-        when(userRepository.findByUsername("wrongUser")).thenReturn(null);
+    public void testLoginWrongUser() throws Exception {
+        LoginRequest req = new LoginRequest("test", "123");
+        when(dao.authenticate("test", "123")).thenThrow(new Exception("INVALID_USERNAME"));
 
-        // Act
-        LoginResponse response = userService.login(request);
-
-        // Assert
-        assertFalse(response.isSuccess());
-        assertEquals(INVALID_USERNAME_MSG, response.getMessage());
-        verify(userRepository, times(1)).findByUsername("wrongUser");
+        LoginResponse res = svc.login(req);
+        assertFalse(res.isSuccess());
+        assertEquals("Sai tên đăng nhập.", res.getMessage());
     }
 
     @Test
-    @DisplayName("Login with incorrect password should return error")
-    void testLoginIncorrectPassword() {
-        // Arrange
-        LoginRequest request = new LoginRequest(VALID_USERNAME, INVALID_PASSWORD);
-        when(userRepository.findByUsername(VALID_USERNAME)).thenReturn(testUser);
+    public void testLoginWrongPass() throws Exception {
+        LoginRequest req = new LoginRequest("test", "123");
+        when(dao.authenticate("test", "123")).thenThrow(new Exception("INVALID_PASSWORD"));
 
-        // Act
-        LoginResponse response = userService.login(request);
-
-        // Assert
-        assertFalse(response.isSuccess());
-        assertEquals(INVALID_PASSWORD_MSG, response.getMessage());
+        LoginResponse res = svc.login(req);
+        assertFalse(res.isSuccess());
+        assertEquals("Sai mật khẩu.", res.getMessage());
     }
 
     @Test
-    @DisplayName("Login with valid credentials should return success")
-    void testLoginWithValidCredentials() {
-        // Arrange
-        LoginRequest request = new LoginRequest(VALID_USERNAME, VALID_PASSWORD);
-        when(userRepository.findByUsername(VALID_USERNAME)).thenReturn(testUser);
+    public void testLoginOk() throws Exception {
+        LoginRequest req = new LoginRequest("test", "123");
+        Bidder b = new Bidder(1L, "test", "123");
+        when(dao.authenticate("test", "123")).thenReturn(b);
 
-        // Act
-        LoginResponse response = userService.login(request);
-
-        // Assert
-        assertTrue(response.isSuccess());
-        assertEquals(LOGIN_SUCCESS_MSG, response.getMessage());
-        assertEquals(VALID_USERNAME, response.getUsername());
-        assertEquals(VALID_ROLE, response.getRole());
+        LoginResponse res = svc.login(req);
+        assertTrue(res.isSuccess());
+        assertEquals("BIDDER", res.getRole());
+        assertEquals("test", res.getUsername());
     }
 
     @Test
-    @DisplayName("Login should retrieve user from repository")
-    void testLoginRepositoryInteraction() {
-        // Arrange
-        LoginRequest request = new LoginRequest(VALID_USERNAME, VALID_PASSWORD);
-        when(userRepository.findByUsername(VALID_USERNAME)).thenReturn(testUser);
-
-        // Act
-        userService.login(request);
-
-        // Assert
-        verify(userRepository, times(1)).findByUsername(VALID_USERNAME);
-    }
-
-    // ============ REGISTRATION TESTS ============
-
-    @Test
-    @DisplayName("Register with empty username should return error")
-    void testRegisterEmptyUsername() {
-        // Arrange
-        RegisterRequest request = new RegisterRequest("", "password", "password", VALID_ROLE);
-
-        // Act
-        RegisterResponse response = userService.register(request);
-
-        // Assert
-        assertFalse(response.isSuccess());
-        assertEquals(MISSING_CREDENTIALS_MSG, response.getMessage());
+    public void testRegNullReq() {
+        RegisterResponse res = svc.register(null);
+        assertFalse(res.isSuccess());
     }
 
     @Test
-    @DisplayName("Register with empty password should return error")
-    void testRegisterEmptyPassword() {
-        // Arrange
-        RegisterRequest request = new RegisterRequest("newuser", "", "", VALID_ROLE);
-
-        // Act
-        RegisterResponse response = userService.register(request);
-
-        // Assert
-        assertFalse(response.isSuccess());
-        assertEquals(MISSING_CREDENTIALS_MSG, response.getMessage());
+    public void testRegMismatch() {
+        RegisterRequest req = new RegisterRequest("test", "123", "456", "BIDDER");
+        RegisterResponse res = svc.register(req);
+        assertFalse(res.isSuccess());
+        assertEquals("Mật khẩu xác nhận không khớp.", res.getMessage());
     }
 
     @Test
-    @DisplayName("Register with empty credentials should return error")
-    void testRegisterEmptyCredentials() {
-        // Arrange
-        RegisterRequest request = new RegisterRequest("", "", "", VALID_ROLE);
+    public void testRegExist() throws Exception {
+        RegisterRequest req = new RegisterRequest("test", "123", "123", "BIDDER");
+        when(dao.registerUser("test", "123", "BIDDER")).thenThrow(new Exception("USERNAME_EXIST"));
 
-        // Act
-        RegisterResponse response = userService.register(request);
-
-        // Assert
-        assertFalse(response.isSuccess());
-        assertEquals(MISSING_CREDENTIALS_MSG, response.getMessage());
+        RegisterResponse res = svc.register(req);
+        assertFalse(res.isSuccess());
+        assertEquals("Tên đăng nhập đã tồn tại.", res.getMessage());
     }
 
     @Test
-    @DisplayName("Register with mismatched passwords should return error")
-    void testRegisterMismatchedPasswords() {
-        // Arrange
-        RegisterRequest request = new RegisterRequest("newuser", "password123", "password456", VALID_ROLE);
+    public void testRegFail() throws Exception {
+        RegisterRequest req = new RegisterRequest("test", "123", "123", "BIDDER");
+        when(dao.registerUser("test", "123", "BIDDER")).thenThrow(new Exception("SAVE_FAILED"));
 
-        // Act
-        RegisterResponse response = userService.register(request);
-
-        // Assert
-        assertFalse(response.isSuccess());
-        assertEquals(PASSWORD_MISMATCH_MSG, response.getMessage());
+        RegisterResponse res = svc.register(req);
+        assertFalse(res.isSuccess());
+        assertEquals("Lỗi hệ thống, không thể lưu tài khoản.", res.getMessage());
     }
 
     @Test
-    @DisplayName("Register with existing username should return error")
-    void testRegisterExistingUsername() {
-        // Arrange
-        RegisterRequest request = new RegisterRequest(VALID_USERNAME, "password", "password", VALID_ROLE);
-        when(userRepository.findByUsername(VALID_USERNAME)).thenReturn(testUser);
+    public void testRegOk() throws Exception {
+        RegisterRequest req = new RegisterRequest("test", "123", "123", "BIDDER");
+        when(dao.registerUser("test", "123", "BIDDER")).thenReturn(true);
 
-        // Act
-        RegisterResponse response = userService.register(request);
-
-        // Assert
-        assertFalse(response.isSuccess());
-        assertEquals(USERNAME_EXISTS_MSG, response.getMessage());
-        verify(userRepository, times(1)).findByUsername(VALID_USERNAME);
-    }
-
-    @Test
-    @DisplayName("Register when database save fails should return error")
-    void testRegisterDatabaseSaveFails() {
-        // Arrange
-        RegisterRequest request = new RegisterRequest("newuser", "password123", "password123", VALID_ROLE);
-        when(userRepository.findByUsername("newuser")).thenReturn(null);
-        when(userRepository.saveUser(any(User.class))).thenReturn(false);
-
-        // Act
-        RegisterResponse response = userService.register(request);
-
-        // Assert
-        assertFalse(response.isSuccess());
-        assertEquals(SAVE_FAILED_MSG, response.getMessage());
-        verify(userRepository, times(1)).saveUser(any(User.class));
-    }
-
-    @Test
-    @DisplayName("Register with valid data should return success")
-    void testRegisterWithValidData() {
-        // Arrange
-        String newUsername = "newuser";
-        String newPassword = "password123";
-        String newRole = "SELLER";
-        RegisterRequest request = new RegisterRequest(newUsername, newPassword, newPassword, newRole);
-        when(userRepository.findByUsername(newUsername)).thenReturn(null);
-        when(userRepository.saveUser(any(User.class))).thenReturn(true);
-
-        // Act
-        RegisterResponse response = userService.register(request);
-
-        // Assert
-        assertTrue(response.isSuccess());
-        assertEquals(REGISTRATION_SUCCESS_MSG, response.getMessage());
-        
-        verify(userRepository, times(1)).findByUsername(newUsername);
-        verify(userRepository, times(1)).saveUser(argThat(user ->
-            user.getUsername().equals(newUsername) &&
-            user.getPassword().equals(newPassword) &&
-            user.getRole().equals(newRole)
-        ));
-    }
-
-    @Test
-    @DisplayName("Register should check for existing username first")
-    void testRegisterRepositoryUsernameCheck() {
-        // Arrange
-        RegisterRequest request = new RegisterRequest("newuser", "password", "password", VALID_ROLE);
-        when(userRepository.findByUsername("newuser")).thenReturn(null);
-        when(userRepository.saveUser(any(User.class))).thenReturn(true);
-
-        // Act
-        userService.register(request);
-
-        // Assert
-        verify(userRepository, times(1)).findByUsername("newuser");
-    }
-
-    @Test
-    @DisplayName("Register should not save if password confirmation fails")
-    void testRegisterNoSaveOnPasswordMismatch() {
-        // Arrange
-        RegisterRequest request = new RegisterRequest("newuser", "password1", "password2", VALID_ROLE);
-
-        // Act
-        userService.register(request);
-
-        // Assert
-        verify(userRepository, never()).saveUser(any(User.class));
+        RegisterResponse res = svc.register(req);
+        assertTrue(res.isSuccess());
+        assertEquals("Đăng ký thành công.", res.getMessage());
     }
 }
-

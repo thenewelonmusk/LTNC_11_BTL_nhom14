@@ -1,16 +1,15 @@
 package com.auction.service.impl;
 
+import com.auction.dao.AuctionDAO; // Giả sử bạn đã tạo class này
+import com.auction.dao.BidDAO;
 import com.auction.dto.BidRequest;
 import com.auction.dto.BidResponse;
 import com.auction.model.Auction;
 import com.auction.model.AuctionStatus;
 import com.auction.model.BidTransaction;
-import com.auction.repository.AuctionRepository;
-import com.auction.repository.BidRepository;
 import com.auction.service.AuctionService;
 import com.auction.service.BidService;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
@@ -25,26 +24,20 @@ public class BidServiceImpl implements BidService {
     private static final String ERROR_SELLER_CANNOT_BID = "Chủ sản phẩm không thể đấu giá.";
     private static final String ERROR_SAVE_FAILED = "Lỗi hệ thống, không thể lưu.";
 
-    // Success messages
     private static final String SUCCESS_BID = "Đặt giá thành công.";
-
-    // Minimum increment (giá phải cao hơn ít nhất 1 đơn vị)
     private static final double MIN_INCREMENT = 1.0;
 
-    private final BidRepository bidRepository;
-    private final AuctionRepository auctionRepository;
+    // SỬA: Thay Repository bằng DAO
+    private final BidDAO bidDAO;
+    private final AuctionDAO auctionDAO;
     private final AuctionService auctionService;
 
-    /**
-     * Mỗi auction có 1 lock riêng. Dùng ConcurrentHashMap để
-     * thread-safe khi nhiều thread cùng yêu cầu lock.
-     * Đây là chìa khóa giải quyết concurrent bidding.
-     */
+    // Quản lý khóa chống đụng độ (Concurrent Bidding)
     private final ConcurrentHashMap<Long, ReentrantLock> auctionLocks = new ConcurrentHashMap<>();
 
-    public BidServiceImpl(BidRepository bidRepository, AuctionRepository auctionRepository,AuctionService auctionService) {
-        this.bidRepository = bidRepository;
-        this.auctionRepository = auctionRepository;
+    public BidServiceImpl(BidDAO bidDAO, AuctionDAO auctionDAO, AuctionService auctionService) {
+        this.bidDAO = bidDAO;
+        this.auctionDAO = auctionDAO;
         this.auctionService = auctionService;
     }
 
@@ -52,101 +45,92 @@ public class BidServiceImpl implements BidService {
     public BidResponse placeBid(BidRequest request, Long bidderId) {
         String error = validateRequest(request, bidderId);
         if (error != null) {
-            return new BidResponse(false,error,null,0);
+            return new BidResponse(false, error, null, 0);
         }
 
         Long auctionId = request.getAuctionId();
+        ReentrantLock lock = auctionLocks.computeIfAbsent(auctionId, k -> new ReentrantLock());
 
-        ReentrantLock lock = auctionLocks.computeIfAbsent(
-                auctionId,k -> new ReentrantLock());
-
+        // CHẶN CỬA: Chỉ cho phép 1 luồng xử lý bid cho 1 auction tại 1 thời điểm
         lock.lock();
         try {
-            return processBid(request,bidderId);
+            return processBid(request, bidderId);
         } finally {
-            lock.unlock();
+            lock.unlock(); // Đảm bảo luôn mở khóa dù có lỗi xảy ra
         }
     }
 
-    /**
-     * Xử lý bid thực sự — đã được lock bảo vệ.
-     * Mọi đọc/ghi auction.currentPrice ở đây là atomic.
-     */
     private BidResponse processBid(BidRequest request, Long bidderId) {
         Long auctionId = request.getAuctionId();
         double amount = request.getAmount();
 
         auctionService.refreshStatus(auctionId);
 
-        Auction auction = auctionRepository.findById(auctionId);
-        if (auction == null) {
-            return new BidResponse(false,ERROR_AUCTION_NOT_FOUND,null,0);
+        try {
+            // DAO ném lỗi nếu không tìm thấy, nên ta bắt ở khối catch
+            Auction auction = auctionDAO.findAuction(auctionId);
+
+            if (auction.getStatus() != AuctionStatus.RUNNING) {
+                return new BidResponse(false, ERROR_AUCTION_NOT_RUNNING, null, auction.getCurrentPrice());
+            }
+
+            if (bidderId.equals(auction.getSellerId())) {
+                return new BidResponse(false, ERROR_SELLER_CANNOT_BID, null, auction.getCurrentPrice());
+            }
+
+            if (amount < auction.getCurrentPrice() + MIN_INCREMENT) {
+                return new BidResponse(false, ERROR_BID_TOO_LOW, null, auction.getCurrentPrice());
+            }
+
+            // 1. Lưu giao dịch đấu giá
+            BidTransaction bid = new BidTransaction();
+            bid.setAuctionId(auctionId);
+            bid.setBidderId(bidderId);
+            bid.setAmount(amount);
+            bidDAO.saveBid(bid);
+
+            // 2. Cập nhật giá trị và người thắng hiện tại cho Auction
+            auction.setCurrentPrice(amount);
+            auction.setWinnerId(bidderId);
+            auctionDAO.updateAuction(auction);
+
+            return new BidResponse(true, SUCCESS_BID, bid, amount);
+
+        } catch (Exception e) {
+            String msg = e.getMessage();
+            double currentPrice = 0; // Hoặc bạn có thể truy vấn lại giá nếu cần
+
+            if ("AUCTION_NOT_FOUND".equals(msg)) {
+                return new BidResponse(false, ERROR_AUCTION_NOT_FOUND, null, 0);
+            }
+            if ("DATABASE_ERROR".equals(msg)) {
+                return new BidResponse(false, msg, null, 0);
+            }
+            return new BidResponse(false, ERROR_SAVE_FAILED, null, 0);
         }
-
-        if (auction.getStatus() != AuctionStatus.RUNNING) {
-            return new BidResponse(false,ERROR_AUCTION_NOT_RUNNING,null,auction.getCurrentPrice());
-        }
-
-        if (bidderId.equals(auction.getSellerId())) {
-            return new BidResponse(false,ERROR_SELLER_CANNOT_BID,null, auction.getCurrentPrice());
-        }
-
-        if (amount < auction.getCurrentPrice() + MIN_INCREMENT) {
-            return new BidResponse(false,ERROR_BID_TOO_LOW,null, auction.getCurrentPrice());
-        }
-
-        BidTransaction bid = new BidTransaction();
-        bid.setAuctionId(auctionId);
-        bid.setBidderId(bidderId);
-        bid.setAmount(amount);
-
-        boolean bidOk = bidRepository.save(bid);
-        if (!bidOk) {
-            return new BidResponse(false,ERROR_SAVE_FAILED,null, auction.getCurrentPrice());
-        }
-
-        auction.setCurrentPrice(amount);
-        auction.setWinnerId(bidderId);
-
-        boolean auctionOk = auctionRepository.save(auction);
-        if (!auctionOk) {
-            return new BidResponse(false,ERROR_SAVE_FAILED,null, auction.getCurrentPrice());
-        }
-
-        return new BidResponse(true,SUCCESS_BID,bid,amount);
     }
 
     @Override
     public List<BidTransaction> getBidsByAuction(Long auctionId) {
-        return bidRepository.findByAuctionId(auctionId);
+        return bidDAO.findByAuctionId(auctionId);
     }
 
     @Override
     public List<BidTransaction> getBidsByBidder(Long bidderId) {
-        return bidRepository.findByBidderId(bidderId);
+        return bidDAO.findByBidderId(bidderId);
     }
 
     @Override
     public BidTransaction getHighestBid(Long auctionId) {
-        return bidRepository.findHighestBidByAuction(auctionId);
+        return bidDAO.findHighestBidByAuction(auctionId);
     }
 
-    /**
-     * Validate input cơ bản (không cần lock).
-     * Trả null nếu hợp lệ, ngược lại trả message lỗi.
-     */
     private String validateRequest(BidRequest req, Long bidderId) {
-        if (req == null) {
-            return ERROR_INVALID_REQUEST;
-        }
-        if (req.getAuctionId() == null) {
+        if (req == null || req.getAuctionId() == null || bidderId == null) {
             return ERROR_INVALID_REQUEST;
         }
         if (req.getAmount() <= 0) {
             return ERROR_AMOUNT_INVALID;
-        }
-        if (bidderId == null) {
-            return ERROR_INVALID_REQUEST;
         }
         return null;
     }

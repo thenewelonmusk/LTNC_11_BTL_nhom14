@@ -16,10 +16,7 @@ public class Main {
             InMemoryUserRepository inMemoryUserRepository = new InMemoryUserRepository();
             
             RegisterRequest registerRequest = new RegisterRequest(name, password, password, "SELLER");
-            UserServiceImpl userServiceImpl = new UserServiceImpl(inMemoryUserRepository);
 
-            RegisterResponse registerResponse = userServiceImpl.register(registerRequest);
-            System.out.println(registerResponse.getMessage());
         }
     }
 }

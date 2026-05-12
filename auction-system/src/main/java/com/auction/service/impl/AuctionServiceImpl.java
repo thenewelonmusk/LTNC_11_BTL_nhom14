@@ -1,19 +1,18 @@
 package com.auction.service.impl;
 
+import com.auction.dao.AuctionDAO;
+import com.auction.dao.ItemDAO;
 import com.auction.dto.AuctionRequest;
 import com.auction.dto.AuctionResponse;
 import com.auction.model.Auction;
 import com.auction.model.AuctionStatus;
 import com.auction.model.item.Item;
-import com.auction.repository.AuctionRepository;
-import com.auction.repository.ItemRepository;
 import com.auction.service.AuctionService;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 public class AuctionServiceImpl implements AuctionService {
-    // Error messages
     private static final String ERROR_INVALID_REQUEST = "Yêu cầu không hợp lệ.";
     private static final String ERROR_ITEM_NOT_FOUND = "Không tìm thấy sản phẩm.";
     private static final String ERROR_NOT_OWNER = "Bạn không phải chủ sản phẩm này.";
@@ -26,168 +25,158 @@ public class AuctionServiceImpl implements AuctionService {
     private static final String ERROR_STILL_RUNNING = "Phiên đấu giá chưa kết thúc.";
     private static final String ERROR_SAVE_FAILED = "Lỗi hệ thống, không thể lưu.";
     private static final String ERROR_ITEM_ALREADY_AUCTIONED = "Sản phẩm đã có phiên đấu giá đang mở.";
-
-    // Success messages
     private static final String SUCCESS_OPEN = "Mở phiên đấu giá thành công.";
     private static final String SUCCESS_CANCEL = "Hủy phiên đấu giá thành công.";
     private static final String SUCCESS_FINISH = "Kết thúc phiên đấu giá thành công.";
     private static final String SUCCESS_FOUND = "OK.";
 
-    private final AuctionRepository auctionRepository;
-    private final ItemRepository itemRepository;
+    private final AuctionDAO auctionDAO;
+    private final ItemDAO itemDAO;
 
-    public AuctionServiceImpl(AuctionRepository auctionRepository, ItemRepository itemRepository) {
-        this.auctionRepository = auctionRepository;
-        this.itemRepository = itemRepository;
+    public AuctionServiceImpl(AuctionDAO auctionDAO, ItemDAO itemDAO) {
+        this.auctionDAO = auctionDAO;
+        this.itemDAO = itemDAO;
     }
 
     @Override
-    public AuctionResponse openAuction(AuctionRequest request, Long sellerId) {
-        String error = validateRequest(request);
-        if (error != null) {
-            return new AuctionResponse(false,error,null);
+    public AuctionResponse openAuction(AuctionRequest req, Long sellerId) {
+        String err = validateRequest(req);
+        if (err != null) return new AuctionResponse(false, err, null);
+
+        try {
+            Item item = itemDAO.findItem(req.getItemId());
+            if (!sellerId.equals(item.getSellerId())) {
+                return new AuctionResponse(false, ERROR_NOT_OWNER, null);
+            }
+
+            List<Auction> list = auctionDAO.findByItemId(req.getItemId());
+            for (Auction a : list) {
+                if (a.getStatus() == AuctionStatus.OPEN || a.getStatus() == AuctionStatus.RUNNING) {
+                    return new AuctionResponse(false, ERROR_ITEM_ALREADY_AUCTIONED, null);
+                }
+            }
+
+            Auction a = new Auction();
+            a.setItemId(req.getItemId());
+            a.setSellerId(sellerId);
+            a.setStartingPrice(req.getStartingPrice());
+            a.setCurrentPrice(req.getStartingPrice());
+            a.setStartTime(req.getStartTime());
+            a.setEndTime(req.getEndTime());
+
+            LocalDateTime now = LocalDateTime.now();
+            if (now.isBefore(req.getStartTime())) {
+                a.setStatus(AuctionStatus.OPEN);
+            } else {
+                a.setStatus(AuctionStatus.RUNNING);
+            }
+
+            if (auctionDAO.createAuction(a)) {
+                return new AuctionResponse(true, SUCCESS_OPEN, a);
+            }
+        } catch (Exception e) {
+            String msg = e.getMessage();
+            if ("ITEM_NOT_FOUND".equals(msg)) return new AuctionResponse(false, ERROR_ITEM_NOT_FOUND, null);
+            if ("DATABASE_ERROR".equals(msg)) return new AuctionResponse(false, msg, null);
         }
-
-        Item item = itemRepository.findById(request.getItemId());
-        if (item == null) {
-            return new AuctionResponse(false,ERROR_ITEM_NOT_FOUND,null);
-        }
-
-        if (!sellerId.equals(item.getSellerId())) {
-            return new AuctionResponse(false,ERROR_NOT_OWNER,null);
-        }
-
-        List<Auction> existingAuctions = auctionRepository.findByItemId(request.getItemId());
-        for (Auction a : existingAuctions) {
-           if (a.getStatus() == AuctionStatus.OPEN || a.getStatus() == AuctionStatus.RUNNING) {
-               return new AuctionResponse(false,ERROR_ITEM_ALREADY_AUCTIONED,null);
-           }
-        }
-
-        Auction auction = new Auction();
-        auction.setItemId(request.getItemId());
-        auction.setSellerId(sellerId);
-        auction.setStartingPrice(request.getStartingPrice());
-        auction.setCurrentPrice(request.getStartingPrice());
-        auction.setStartTime(request.getStartTime());
-        auction.setEndTime(request.getEndTime());
-
-        LocalDateTime now = LocalDateTime.now();
-        if (now.isBefore(request.getStartTime())) {
-            auction.setStatus(AuctionStatus.OPEN);
-        } else {
-            auction.setStatus(AuctionStatus.RUNNING);
-        }
-
-        boolean ok = auctionRepository.save(auction);
-        if (!ok) {
-            return new AuctionResponse(false,ERROR_SAVE_FAILED,null);
-        }
-
-        return new AuctionResponse(true,SUCCESS_OPEN,auction);
+        return new AuctionResponse(false, ERROR_SAVE_FAILED, null);
     }
 
     @Override
     public AuctionResponse cancelAuction(Long auctionId, Long sellerId) {
-        Auction auction = auctionRepository.findById(auctionId);
-        if (auction == null) {
-            return new AuctionResponse(false,ERROR_AUCTION_NOT_FOUND,null);
-        }
+        try {
+            Auction a = auctionDAO.findAuction(auctionId);
+            if (!sellerId.equals(a.getSellerId())) {
+                return new AuctionResponse(false, ERROR_NOT_OWNER, null);
+            }
 
-        if (!sellerId.equals(auction.getSellerId())) {
-            return new AuctionResponse(false,ERROR_NOT_OWNER,null);
-        }
+            if (a.getStatus() == AuctionStatus.FINISHED || a.getStatus() == AuctionStatus.PAID || a.getStatus() == AuctionStatus.CANCELED) {
+                return new AuctionResponse(false, ERROR_CANNOT_CANCEL, null);
+            }
 
-        if (auction.getStatus() == AuctionStatus.FINISHED
-                || auction.getStatus() == AuctionStatus.PAID
-                || auction.getStatus() == AuctionStatus.CANCELED) {
-            return new AuctionResponse(false, ERROR_CANNOT_CANCEL, null);
+            a.setStatus(AuctionStatus.CANCELED);
+            if (auctionDAO.updateAuction(a)) {
+                return new AuctionResponse(true, SUCCESS_CANCEL, a);
+            }
+        } catch (Exception e) {
+            String msg = e.getMessage();
+            if ("AUCTION_NOT_FOUND".equals(msg)) return new AuctionResponse(false, ERROR_AUCTION_NOT_FOUND, null);
+            if ("DATABASE_ERROR".equals(msg)) return new AuctionResponse(false, msg, null);
         }
-
-        auction.setStatus(AuctionStatus.CANCELED);
-        boolean ok = auctionRepository.save(auction);
-        if (!ok) {
-            return new AuctionResponse(false,ERROR_SAVE_FAILED,null);
-        }
-
-        return new AuctionResponse(true,SUCCESS_CANCEL,auction);
+        return new AuctionResponse(false, ERROR_SAVE_FAILED, null);
     }
 
     @Override
     public AuctionResponse finishAuction(Long auctionId) {
-        Auction auction = auctionRepository.findById(auctionId);
-        if (auction == null) {
-            return new AuctionResponse(false,ERROR_AUCTION_NOT_FOUND,null);
+        try {
+            Auction a = auctionDAO.findAuction(auctionId);
+            if (LocalDateTime.now().isBefore(a.getEndTime())) {
+                return new AuctionResponse(false, ERROR_STILL_RUNNING, null);
+            }
+
+            if (a.getStatus() == AuctionStatus.FINISHED || a.getStatus() == AuctionStatus.PAID || a.getStatus() == AuctionStatus.CANCELED) {
+                return new AuctionResponse(false, ERROR_CANNOT_FINISH, null);
+            }
+
+            a.setStatus(AuctionStatus.FINISHED);
+            if (auctionDAO.updateAuction(a)) {
+                return new AuctionResponse(true, SUCCESS_FINISH, a);
+            }
+        } catch (Exception e) {
+            String msg = e.getMessage();
+            if ("AUCTION_NOT_FOUND".equals(msg)) return new AuctionResponse(false, ERROR_AUCTION_NOT_FOUND, null);
+            if ("DATABASE_ERROR".equals(msg)) return new AuctionResponse(false, msg, null);
         }
-
-        if (LocalDateTime.now().isBefore(auction.getEndTime())) {
-            return new AuctionResponse(false, ERROR_STILL_RUNNING,null);
-        }
-
-        if (auction.getStatus() == AuctionStatus.FINISHED
-            || auction.getStatus() == AuctionStatus.PAID
-            || auction.getStatus() == AuctionStatus.CANCELED) {
-            return new AuctionResponse(false,ERROR_CANNOT_FINISH,null);
-        }
-
-        auction.setStatus(AuctionStatus.FINISHED);
-
-        boolean ok = auctionRepository.save(auction);
-        if (!ok) {
-            return new AuctionResponse(false,ERROR_SAVE_FAILED,null);
-        }
-
-        return new AuctionResponse(true,SUCCESS_FINISH,auction);
+        return new AuctionResponse(false, ERROR_SAVE_FAILED, null);
     }
 
     @Override
     public void refreshStatus(Long auctionId) {
-        Auction auction = auctionRepository.findById(auctionId);
-        if (auction == null) return;
+        try {
+            Auction a = auctionDAO.findAuction(auctionId);
+            LocalDateTime now = LocalDateTime.now();
+            AuctionStatus cur = a.getStatus();
 
-        LocalDateTime now = LocalDateTime.now();
-        AuctionStatus current = auction.getStatus();
-
-        // OPEN -> RUNNING
-        if (current == AuctionStatus.OPEN && !now.isBefore(auction.getStartTime())) {
-            auction.setStatus(AuctionStatus.RUNNING);
-            auctionRepository.save(auction);
-        }
-
-        //RUNNING -> FINISHED
-        else if (current == AuctionStatus.RUNNING && now.isAfter(auction.getEndTime())) {
-            auction.setStatus(AuctionStatus.FINISHED);
-            auctionRepository.save(auction);
-        }
+            if (cur == AuctionStatus.OPEN && !now.isBefore(a.getStartTime())) {
+                a.setStatus(AuctionStatus.RUNNING);
+                auctionDAO.updateAuction(a);
+            } else if (cur == AuctionStatus.RUNNING && now.isAfter(a.getEndTime())) {
+                a.setStatus(AuctionStatus.FINISHED);
+                auctionDAO.updateAuction(a);
+            }
+        } catch (Exception e) {}
     }
 
     @Override
     public AuctionResponse findAuctionById(Long auctionId) {
-        Auction auction = auctionRepository.findById(auctionId);
-
-        if (auction == null) {
-            return new AuctionResponse(false, ERROR_AUCTION_NOT_FOUND, null);
+        try {
+            Auction a = auctionDAO.findAuction(auctionId);
+            return new AuctionResponse(true, SUCCESS_FOUND, a);
+        } catch (Exception e) {
+            String msg = e.getMessage();
+            if ("AUCTION_NOT_FOUND".equals(msg)) return new AuctionResponse(false, ERROR_AUCTION_NOT_FOUND, null);
+            if ("DATABASE_ERROR".equals(msg)) return new AuctionResponse(false, msg, null);
         }
-        return new AuctionResponse(true, SUCCESS_FOUND, auction);
+        return new AuctionResponse(false, ERROR_AUCTION_NOT_FOUND, null);
     }
 
     @Override
     public List<Auction> getAllAuctions() {
-        return auctionRepository.findALl();
+        return auctionDAO.findAll();
     }
 
     @Override
     public List<Auction> getAuctionsByStatus(AuctionStatus status) {
-        return auctionRepository.findByStatus(status);
+        return auctionDAO.findByStatus(status);
     }
 
     @Override
     public List<Auction> getAuctionsBySeller(Long sellerId) {
-        return auctionRepository.findBySellerId(sellerId);
+        return auctionDAO.findBySellerId(sellerId);
     }
 
     public String validateRequest(AuctionRequest req) {
-        if (req == null)  return ERROR_INVALID_REQUEST;
+        if (req == null) return ERROR_INVALID_REQUEST;
         if (req.getItemId() == null) return ERROR_INVALID_REQUEST;
         if (req.getStartingPrice() <= 0) return ERROR_INVALID_PRICE;
         if (req.getStartTime() == null || req.getEndTime() == null) return ERROR_INVALID_TIME;
@@ -195,5 +184,4 @@ public class AuctionServiceImpl implements AuctionService {
         if (req.getStartTime().isBefore(LocalDateTime.now().minusMinutes(1))) return ERROR_TIME_IN_PAST;
         return null;
     }
-
 }

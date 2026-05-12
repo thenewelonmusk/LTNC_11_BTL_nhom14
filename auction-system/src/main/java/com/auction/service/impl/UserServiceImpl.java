@@ -1,109 +1,83 @@
 package com.auction.service.impl;
 
-import com.auction.dto.LoginRequest;
-import com.auction.dto.LoginResponse;
-import com.auction.dto.RegisterRequest;
-import com.auction.dto.RegisterResponse;
+import com.auction.dao.UserDAO;
+import com.auction.dto.*;
 import com.auction.model.user.User;
-import com.auction.repository.UserRepository;
 import com.auction.service.UserService;
 
-/**
- * Implementation of UserService for user authentication and registration.
- * Handles login and registration operations with validation.
- */
 public class UserServiceImpl implements UserService {
-    
-    // Error messages
+
     private static final String ERROR_MISSING_CREDENTIALS = "Vui lòng nhập đủ thông tin.";
     private static final String ERROR_INVALID_USERNAME = "Sai tên đăng nhập.";
     private static final String ERROR_INVALID_PASSWORD = "Sai mật khẩu.";
     private static final String ERROR_USERNAME_EXISTS = "Tên đăng nhập đã tồn tại.";
     private static final String ERROR_PASSWORD_MISMATCH = "Mật khẩu xác nhận không khớp.";
     private static final String ERROR_SAVE_FAILED = "Lỗi hệ thống, không thể lưu tài khoản.";
-    
-    // Success messages
+
     private static final String SUCCESS_LOGIN = "Đăng nhập thành công.";
     private static final String SUCCESS_REGISTER = "Đăng ký thành công.";
-    
-    private final UserRepository userRepository;
 
-    public UserServiceImpl(UserRepository userRepository) {
-        this.userRepository = userRepository;
+    private final UserDAO userDAO;
+
+    // Không cần truyền UserRepository nếu không dùng, khởi tạo trực tiếp DAO
+    public UserServiceImpl(UserDAO userDAO) {
+        this.userDAO = userDAO;
     }
 
-    /**
-     * Authenticates a user based on username and password.
-     *
-     * @param request the login request containing username and password
-     * @return LoginResponse with success status and user details if successful
-     */
     @Override
-    public LoginResponse login(LoginRequest request) {
-        // Validate input
-        if (request == null || isCredentialsInvalid(request.getUsername(), request.getPassword())) {
+    public LoginResponse login(LoginRequest req) {
+        // BỔ SUNG: Kiểm tra dữ liệu đầu vào
+        if (req == null || isCredentialsInvalid(req.getUsername(), req.getPassword())) {
             return new LoginResponse(false, ERROR_MISSING_CREDENTIALS, null, null);
         }
 
-        // Find user by username
-        User user = userRepository.findByUsername(request.getUsername());
-        if (user == null) {
-            return new LoginResponse(false, ERROR_INVALID_USERNAME, null, null);
-        }
+        try {
+            User user = userDAO.authenticate(req.getUsername(), req.getPassword());
+            // SỬA: Trả về Role (tên class) thay vì trả về mật khẩu
+            String role = user.getClass().getSimpleName().toUpperCase();
+            return new LoginResponse(true, SUCCESS_LOGIN, user.getUsername(), role);
 
-        // Verify password
-        if (!user.getPassword().equals(request.getPassword())) {
-            return new LoginResponse(false, ERROR_INVALID_PASSWORD, null, null);
+        } catch (Exception e) {
+            String msg = e.getMessage();
+            // SỬA: Dùng .equals() thay vì ==
+            if ("INVALID_USERNAME".equals(msg)) {
+                return new LoginResponse(false, ERROR_INVALID_USERNAME, null, null);
+            } else if ("INVALID_PASSWORD".equals(msg)) {
+                return new LoginResponse(false, ERROR_INVALID_PASSWORD, null, null);
+            }
+            return new LoginResponse(false, "ngu", null, null);
         }
-
-        // Successful login
-        return new LoginResponse(true, SUCCESS_LOGIN, user.getUsername(), user.getRole());
     }
 
-    /**
-     * Registers a new user with validation.
-     *
-     * @param request the registration request containing username, password, and role
-     * @return RegisterResponse with success status and message
-     */
     @Override
     public RegisterResponse register(RegisterRequest request) {
-        // Validate input
         if (request == null || isCredentialsInvalid(request.getUsername(), request.getPassword())) {
             return new RegisterResponse(false, ERROR_MISSING_CREDENTIALS);
         }
 
-        // Verify password confirmation
         if (!request.getPassword().equals(request.getConfirmPassword())) {
             return new RegisterResponse(false, ERROR_PASSWORD_MISMATCH);
         }
 
-        // Check if username already exists
-        User existingUser = userRepository.findByUsername(request.getUsername());
-        if (existingUser != null) {
-            return new RegisterResponse(false, ERROR_USERNAME_EXISTS);
-        }
-
-        // Create and save new user
-        User newUser = new User(null, request.getUsername(), request.getPassword(), request.getRole());
-        boolean isSaved = userRepository.saveUser(newUser);
-
-        if (isSaved) {
+        try {
+            // Biến registering không dùng có thể bỏ qua
+            userDAO.registerUser(request.getUsername(), request.getPassword(), request.getRole());
             return new RegisterResponse(true, SUCCESS_REGISTER);
-        } else {
-            return new RegisterResponse(false, ERROR_SAVE_FAILED);
+        } catch (Exception e) {
+            String msg = e.getMessage();
+            // SỬA: Dùng .equals() và khớp chính xác chữ USERNAME_EXIST từ DAO
+            if ("USERNAME_EXIST".equals(msg)) {
+                return new RegisterResponse(false, ERROR_USERNAME_EXISTS);
+            } else if ("SAVE_FAILED".equals(msg)) {
+                return new RegisterResponse(false, ERROR_SAVE_FAILED);
+            } else {
+                return new RegisterResponse(false, msg);
+            }
         }
     }
 
-    /**
-     * Validates that credentials are not null, empty, or blank.
-     *
-     * @param username the username to validate
-     * @param password the password to validate
-     * @return true if credentials are invalid, false otherwise
-     */
     private boolean isCredentialsInvalid(String username, String password) {
-        return username == null || username.isBlank() || 
-               password == null || password.isBlank();
+        return username == null || username.isBlank() ||
+                password == null || password.isBlank();
     }
 }
