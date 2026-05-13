@@ -19,33 +19,31 @@ public class UserServiceImpl implements UserService {
 
     private final UserDAO userDAO;
 
-    // Không cần truyền UserRepository nếu không dùng, khởi tạo trực tiếp DAO
     public UserServiceImpl(UserDAO userDAO) {
         this.userDAO = userDAO;
     }
 
     @Override
     public LoginResponse login(LoginRequest req) {
-        // BỔ SUNG: Kiểm tra dữ liệu đầu vào
         if (req == null || isCredentialsInvalid(req.getUsername(), req.getPassword())) {
-            return new LoginResponse(false, ERROR_MISSING_CREDENTIALS, null, null);
+            return new LoginResponse(false, ERROR_MISSING_CREDENTIALS, null, null, null);
         }
 
         try {
             User user = userDAO.authenticate(req.getUsername(), req.getPassword());
-            // SỬA: Trả về Role (tên class) thay vì trả về mật khẩu
             String role = user.getClass().getSimpleName().toUpperCase();
-            return new LoginResponse(true, SUCCESS_LOGIN, user.getUsername(), role);
+
+            // SỬA: Đã thêm user.getId() vào Constructor
+            return new LoginResponse(true, SUCCESS_LOGIN, user.getId(), user.getUsername(), role);
 
         } catch (Exception e) {
             String msg = e.getMessage();
-            // SỬA: Dùng .equals() thay vì ==
             if ("INVALID_USERNAME".equals(msg)) {
-                return new LoginResponse(false, ERROR_INVALID_USERNAME, null, null);
+                return new LoginResponse(false, ERROR_INVALID_USERNAME, null, null, null);
             } else if ("INVALID_PASSWORD".equals(msg)) {
-                return new LoginResponse(false, ERROR_INVALID_PASSWORD, null, null);
+                return new LoginResponse(false, ERROR_INVALID_PASSWORD, null, null, null);
             }
-            return new LoginResponse(false, "ngu", null, null);
+            return new LoginResponse(false, "Lỗi hệ thống: " + msg, null, null, null);
         }
     }
 
@@ -60,12 +58,10 @@ public class UserServiceImpl implements UserService {
         }
 
         try {
-            // Biến registering không dùng có thể bỏ qua
             userDAO.registerUser(request.getUsername(), request.getPassword(), request.getRole());
             return new RegisterResponse(true, SUCCESS_REGISTER);
         } catch (Exception e) {
             String msg = e.getMessage();
-            // SỬA: Dùng .equals() và khớp chính xác chữ USERNAME_EXIST từ DAO
             if ("USERNAME_EXIST".equals(msg)) {
                 return new RegisterResponse(false, ERROR_USERNAME_EXISTS);
             } else if ("SAVE_FAILED".equals(msg)) {

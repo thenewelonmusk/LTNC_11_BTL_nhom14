@@ -22,7 +22,7 @@ public class ItemRequest {
     private int mileage;
 
     public Long getItemId() {return itemId;}
-    public void setItemId(Long id) {this.itemId = itemId;}
+    public void setItemId(Long id) {this.itemId = id;}
 
     public Long getSellerId() {return sellerId;}
     public void setSellerId(Long sellerId) {this.sellerId = sellerId;}

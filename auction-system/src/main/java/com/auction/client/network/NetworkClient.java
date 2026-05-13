@@ -1,8 +1,14 @@
 package com.auction.client.network;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.TypeAdapter;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonWriter;
+
 import java.io.*;
 import java.net.Socket;
+import java.time.LocalDateTime;
 
 public class NetworkClient {
     private static NetworkClient instance;
@@ -10,8 +16,18 @@ public class NetworkClient {
     private PrintWriter out;
     private BufferedReader in;
 
-    // Khởi tạo Gson ngay từ đầu để tránh NullPointerException dù kết nối có xịt
-    private final Gson gson = new Gson();
+    // SỬA LỖI: Trang bị TypeAdapter cho LocalDateTime để Gson không dùng Reflection
+    private final Gson gson = new GsonBuilder()
+            .registerTypeAdapter(LocalDateTime.class, new TypeAdapter<LocalDateTime>() {
+                @Override
+                public void write(JsonWriter out, LocalDateTime value) throws IOException {
+                    out.value(value != null ? value.toString() : null);
+                }
+                @Override
+                public LocalDateTime read(JsonReader in) throws IOException {
+                    return LocalDateTime.parse(in.nextString());
+                }
+            }).create();
 
     private NetworkClient() {
         connect();
@@ -24,7 +40,6 @@ public class NetworkClient {
         return instance;
     }
 
-    // Tách riêng hàm connect để sau này có thể làm nút "Thử kết nối lại" trên GUI
     public void connect() {
         try {
             socket = new Socket("localhost", 8080);
@@ -33,29 +48,22 @@ public class NetworkClient {
             System.out.println("Đã kết nối tới Server thành công!");
         } catch (IOException e) {
             System.err.println("LỖI: Không thể kết nối đến Server. Vui lòng bật Server trước!");
-            socket = null; // Đảm bảo socket là null nếu lỗi
+            socket = null;
         }
     }
 
     public String sendAndReceive(String action, Object dataPayload) {
-        // Kiểm tra an toàn trước khi gửi
         if (socket == null || out == null || in == null) {
             System.err.println("Chưa có kết nối tới Server.");
             return null;
         }
 
         try {
-            // 1. Biến Object (LoginRequest, RegisterRequest) thành JSON String
+            // Gson giờ đã biết cách xử lý LocalDateTime một cách an toàn
             String jsonData = gson.toJson(dataPayload);
-
-            // 2. Bọc lại thành một khung chuẩn giao tiếp (Wrapper)
-            // Ví dụ: {"action": "LOGIN", "data": "{\"username\":\"...\"}"}
             String requestMessage = "{\"action\":\"" + action + "\", \"data\":" + jsonData + "}";
 
-            // 3. Gửi lên Server
             out.println(requestMessage);
-
-            // 4. Chờ Server xử lý và đọc phản hồi
             return in.readLine();
 
         } catch (IOException e) {

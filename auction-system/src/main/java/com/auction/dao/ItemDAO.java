@@ -9,50 +9,12 @@ import java.util.List;
 import java.sql.*;
 
 public class ItemDAO {
-//    public Long saveItem(ItemRequest req) throws Exception {
-//        boolean isUpdate = req.getItemId() != null && req.getItemId() > 0;
-//        String sql;
-//        if (isUpdate) {
-//            sql = "UPDATE items SET name = ?, description = ?, category = ?, starting_price = ?, seller_id = ? WHERE id = ?";
-//        } else {
-//            sql = "INSERT INTO items (name, description, category, starting_price, seller_id) VALUES (?, ?, ?, ?, ?)";
-//        }
-//
-//        // SỬA: Thêm Statement.RETURN_GENERATED_KEYS để lấy ID mới
-//        try (Connection conn = DatabaseConnection.getConnection();
-//             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-//
-//            stmt.setString(1, req.getName());
-//            stmt.setString(2, req.getDescription());
-//            stmt.setString(3, req.getType());
-//            stmt.setDouble(4, req.getStartingPrice());
-//            stmt.setLong(5, req.getSellerId());
-//
-//            if (isUpdate) {
-//                stmt.setLong(6, req.getItemId());
-//                stmt.executeUpdate();
-//                return req.getItemId(); // Trả về chính ID cũ nếu là Update
-//            } else {
-//                stmt.executeUpdate();
-//                // Lấy ID vừa được MySQL sinh ra
-//                try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
-//                    if (generatedKeys.next()) {
-//                        return generatedKeys.getLong(1);
-//                    }
-//                }
-//            }
-//            throw new Exception("SAVE_FAILED");
-//        } catch (SQLException e) {
-//            e.printStackTrace();
-//            throw new Exception("DATABASE_ERROR");
-//        }
-//    }
 
-    public boolean createItem(ItemRequest request) throws Exception {
+    public Long createItem(ItemRequest request) throws Exception {
         String sql = "INSERT INTO items (name, description, category, starting_price, seller_id) VALUES (?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             stmt.setString(1, request.getName());
             stmt.setString(2, request.getDescription());
@@ -60,16 +22,24 @@ public class ItemDAO {
             stmt.setDouble(4, request.getStartingPrice());
             stmt.setLong(5, request.getSellerId());
 
-            return stmt.executeUpdate() > 0;
+            int affectedRows = stmt.executeUpdate();
+            if (affectedRows > 0) {
+                // Hứng ID tự động tăng từ Database
+                try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
+                    if (generatedKeys.next()) {
+                        return generatedKeys.getLong(1);
+                    }
+                }
+            }
+            throw new Exception("SAVE_FAILED");
         } catch (SQLException e) {
-            e.printStackTrace(); // Quan trọng để debug
+            e.printStackTrace();
             throw new Exception("DATABASE_ERROR");
         }
     }
 
     public boolean updateItem(ItemRequest request) throws Exception {
         String sql = "UPDATE items SET name = ?, description = ?, category = ?, starting_price = ?, seller_id = ? WHERE id = ?";
-        // SỬA: Đưa stmt vào try-with-resources
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
@@ -83,7 +53,7 @@ public class ItemDAO {
             if (stmt.executeUpdate() > 0) return true;
             throw new Exception("SAVE_FAILED");
         } catch (SQLException e) {
-            e.printStackTrace(); // SỬA: Thêm printStackTrace
+            e.printStackTrace();
             throw new Exception("DATABASE_ERROR");
         }
     }
@@ -94,7 +64,6 @@ public class ItemDAO {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setLong(1, itemId);
-            // SỬA: Đưa ResultSet vào try-with-resources
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
                     return mapResultSetToItem(rs);
@@ -109,17 +78,15 @@ public class ItemDAO {
 
     public boolean deleteItem(Long itemId) throws Exception {
         String sql = "DELETE FROM items WHERE id = ?";
-
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)
-        ) {
-           stmt.setLong(1, itemId);
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, itemId);
 
-           int rowsAffected = stmt.executeUpdate();
-           if (rowsAffected > 0) {
-               return true;
-           }
-           throw new Exception("DELETE_FAILED");
+            int rowsAffected = stmt.executeUpdate();
+            if (rowsAffected > 0) {
+                return true;
+            }
+            throw new Exception("DELETE_FAILED");
         } catch (SQLException e) {
             e.printStackTrace();
             throw new Exception("DATABASE_ERROR");
@@ -174,13 +141,10 @@ public class ItemDAO {
 
     public List<Item> getAllItems() {
         List<Item> items = new ArrayList<>();
-        // SỬA: Thêm dấu nháy đơn cho các giá trị ENUM 'OPEN' và 'RUNNING'
         String sql = "SELECT * FROM items WHERE status = 'OPEN' OR status = 'RUNNING'";
-
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
-
             while (rs.next()) {
                 items.add(mapResultSetToItem(rs));
             }

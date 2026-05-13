@@ -1,18 +1,14 @@
 package com.auction.server;
 
-import com.auction.dao.ItemDAO;
-import com.auction.dao.UserDAO;
+import com.auction.dao.*;
 import com.auction.dto.*;
-import com.auction.service.ItemService;
-import com.auction.service.UserService;
-import com.auction.service.impl.ItemServiceImpl;
-import com.auction.service.impl.UserServiceImpl;
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.auction.service.*;
+import com.auction.service.impl.*;
+import com.google.gson.*;
 
 import java.io.*;
 import java.net.Socket;
+import java.time.LocalDateTime;
 
 public class ClientHandler implements Runnable {
     private Socket clientSocket;
@@ -20,14 +16,37 @@ public class ClientHandler implements Runnable {
     private PrintWriter out;
     private Gson gson;
 
-    // Khởi tạo Service chuẩn chỉ dùng Database
     private UserService userService;
-    private ItemService itemService = new ItemServiceImpl(new ItemDAO());
+    private ItemService itemService;
+    private AuctionService auctionService;
+    private BidService bidService;
 
     public ClientHandler(Socket socket) {
         this.clientSocket = socket;
-        this.gson = new Gson();
-        this.userService = new UserServiceImpl(new UserDAO());
+
+        // Cấu hình Gson để đọc/ghi thời gian chuẩn xác
+        this.gson = new GsonBuilder()
+                .registerTypeAdapter(LocalDateTime.class, new TypeAdapter<LocalDateTime>() {
+                    @Override
+                    public void write(com.google.gson.stream.JsonWriter out, LocalDateTime value) throws IOException {
+                        out.value(value != null ? value.toString() : null);
+                    }
+                    @Override
+                    public LocalDateTime read(com.google.gson.stream.JsonReader in) throws IOException {
+                        return LocalDateTime.parse(in.nextString());
+                    }
+                }).create();
+
+        // Khởi tạo trọn bộ DAO và Service
+        UserDAO userDAO = new UserDAO();
+        ItemDAO itemDAO = new ItemDAO();
+        AuctionDAO auctionDAO = new AuctionDAO();
+        BidDAO bidDAO = new BidDAO();
+
+        this.userService = new UserServiceImpl(userDAO);
+        this.itemService = new ItemServiceImpl(itemDAO);
+        this.auctionService = new AuctionServiceImpl(auctionDAO, itemDAO);
+        this.bidService = new BidServiceImpl(bidDAO, auctionDAO, this.auctionService);
 
         try {
             in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
@@ -41,25 +60,19 @@ public class ClientHandler implements Runnable {
     public void run() {
         try {
             String clientMessage;
-            // Liên tục đọc request từ Client này
             while ((clientMessage = in.readLine()) != null) {
                 System.out.println("[Request từ Client]: " + clientMessage);
 
-                // 1. Phân tích chuỗi JSON bọc ngoài
                 JsonObject requestObj = JsonParser.parseString(clientMessage).getAsJsonObject();
                 String action = requestObj.get("action").getAsString();
                 JsonObject dataObj = requestObj.getAsJsonObject("data");
 
                 String jsonResponse = "";
 
-                // 2. Điều hướng (Routing) dựa trên Action
                 switch (action) {
                     case "LOGIN":
-                        // Ép kiểu JSON data thành LoginRequest object
                         LoginRequest loginReq = gson.fromJson(dataObj, LoginRequest.class);
-                        // Gọi UserService đã xử lý chuẩn DB
                         LoginResponse loginRes = userService.login(loginReq);
-                        // Đóng gói trả lại
                         jsonResponse = gson.toJson(loginRes);
                         break;
 
@@ -69,29 +82,39 @@ public class ClientHandler implements Runnable {
                         jsonResponse = gson.toJson(regRes);
                         break;
 
-//                    case "SAVE_ITEM":
-//                        ItemRequest itemReq = gson.fromJson(dataObj, ItemRequest.class);
-//                        ItemResponse itemRes = itemService.saveItem(itemReq, itemReq.getSellerId());
-//                        out.println(gson.toJson(itemRes));
-//                        break;
-                    // TODO sau này: case "GET_ALL_ITEMS", "PLACE_BID", v.v...
+                    case "SAVE_ITEM":
+                        ItemRequest itemReq = gson.fromJson(dataObj, ItemRequest.class);
+                        ItemResponse itemRes;
+                        if (itemReq.getItemId() != null && itemReq.getItemId() > 0) {
+                            itemRes = itemService.updateItem(itemReq.getItemId(), itemReq, itemReq.getSellerId());
+                        } else {
+                            itemRes = itemService.createItem(itemReq, itemReq.getSellerId());
+                        }
+                        jsonResponse = gson.toJson(itemRes);
+                        break;
+
+                    case "OPEN_AUCTION":
+                        AuctionRequest aReq = gson.fromJson(dataObj, AuctionRequest.class);
+                        AuctionResponse aRes = auctionService.openAuction(aReq, aReq.getSellerId());
+                        jsonResponse = gson.toJson(aRes);
+                        break;
+
+                    case "PLACE_BID":
+                        BidRequest bReq = gson.fromJson(dataObj, BidRequest.class);
+                        BidResponse bRes = bidService.placeBid(bReq, bReq.getUserId());
+                        jsonResponse = gson.toJson(bRes);
+                        break;
 
                     default:
                         jsonResponse = "{\"success\":false, \"message\":\"Hành động không hợp lệ!\"}";
                         break;
                 }
-
-                // 3. Gửi kết quả lại cho NetworkClient của JavaFX
                 out.println(jsonResponse);
             }
         } catch (Exception e) {
-            System.out.println("[-] Client đã ngắt kết nối: " + clientSocket.getInetAddress());
+            System.out.println("[-] Client đã ngắt kết nối.");
         } finally {
-            try {
-                clientSocket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            try { if (clientSocket != null) clientSocket.close(); } catch (IOException e) {}
         }
     }
 }

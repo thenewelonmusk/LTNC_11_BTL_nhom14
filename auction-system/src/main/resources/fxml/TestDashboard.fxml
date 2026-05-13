@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.String?>
+<?import javafx.collections.FXCollections?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+
+<VBox prefHeight="500.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.client.controller.TestDashboardController">
+    <Label alignment="CENTER" prefHeight="50.0" prefWidth="600.0" style="-fx-background-color: #2c3e50; -fx-text-fill: white;" text="AUCTION SYSTEM - TEST DASHBOARD">
+        <font><Font name="System Bold" size="18.0" /></font>
+    </Label>
+
+    <TabPane prefHeight="450.0" prefWidth="600.0" tabClosingPolicy="UNAVAILABLE">
+        <tabs>
+            <Tab text="1. Tài khoản (Auth)">
+                <VBox alignment="CENTER" spacing="15.0" style="-fx-padding: 40;">
+                    <Label text="ĐĂNG NHẬP / ĐĂNG KÝ">
+                        <font><Font name="System Bold" size="16.0" /></font>
+                    </Label>
+                    <TextField fx:id="txtUsername" promptText="Tên đăng nhập" prefHeight="35.0" maxWidth="300"/>
+                    <PasswordField fx:id="txtPassword" promptText="Mật khẩu" prefHeight="35.0" maxWidth="300"/>
+                    <HBox alignment="CENTER" spacing="20.0">
+                        <Button text="Đăng Ký" onAction="#handleRegister" prefHeight="35.0" prefWidth="140.0" style="-fx-background-color: #3498db; -fx-text-fill: white;"/>
+                        <Button text="Đăng Nhập" onAction="#handleLogin" prefHeight="35.0" prefWidth="140.0" style="-fx-background-color: #2ecc71; -fx-text-fill: white;"/>
+                    </HBox>
+                    <Label fx:id="lblLoginStatus" text="Chưa đăng nhập" textFill="#e74c3c" />
+                </VBox>
+            </Tab>
+
+            <Tab text="2. Đăng bán (Seller)">
+                <VBox alignment="CENTER" spacing="15.0" style="-fx-padding: 30;">
+                    <TextField fx:id="txtItemName" promptText="Tên sản phẩm" prefHeight="35.0" maxWidth="400"/>
+                    <ComboBox fx:id="cbCategory" prefHeight="35.0" prefWidth="400.0" promptText="Danh mục">
+                        <items>
+                            <FXCollections fx:factory="observableArrayList">
+                                <String fx:value="ELECTRONICS" />
+                                <String fx:value="ART" />
+                                <String fx:value="VEHICLE" />
+                            </FXCollections>
+                        </items>
+                    </ComboBox>
+                    <TextField fx:id="txtStartPrice" promptText="Giá khởi điểm (VNĐ)" prefHeight="35.0" maxWidth="400"/>
+                    <Button text="TẠO SẢN PHẨM &amp; MỞ PHIÊN" onAction="#handleCreateAndOpenAuction" prefHeight="40.0" prefWidth="400.0" style="-fx-background-color: #e67e22; -fx-text-fill: white; -fx-font-weight: bold;"/>
+                </VBox>
+            </Tab>
+
+            <Tab text="3. Đấu giá (Bidder)">
+                <VBox alignment="CENTER" spacing="15.0" style="-fx-padding: 40;">
+                    <TextField fx:id="txtAuctionId" promptText="ID Phiên đấu giá" prefHeight="35.0" maxWidth="300"/>
+                    <TextField fx:id="txtBidAmount" promptText="Giá muốn đặt (VNĐ)" prefHeight="35.0" maxWidth="300"/>
+                    <Button text="ĐẶT GIÁ (PLACE BID)" onAction="#handlePlaceBid" prefHeight="40.0" prefWidth="300.0" style="-fx-background-color: #9b59b6; -fx-text-fill: white; -fx-font-weight: bold;"/>
+                </VBox>
+            </Tab>
+        </tabs>
+    </TabPane>
+</VBox>

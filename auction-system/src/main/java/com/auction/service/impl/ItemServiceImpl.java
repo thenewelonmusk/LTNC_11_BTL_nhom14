@@ -41,8 +41,11 @@ public class ItemServiceImpl implements ItemService {
             request.setSellerId(sellerId);
             ItemFactory.create(request); // Test category validity
 
-            boolean result = itemDAO.createItem(request);
-            if (result) {
+            // ĐÃ SỬA: Lấy ID từ DAO (kiểu Long)
+            Long newId = itemDAO.createItem(request);
+            if (newId != null) {
+                // Nhét ID lại vào request để Client nhận được
+                request.setItemId(newId);
                 return new ItemResponse(true, SUCCESS_CREATE, request);
             }
         } catch (IllegalArgumentException e) {
@@ -73,7 +76,7 @@ public class ItemServiceImpl implements ItemService {
 
             request.setItemId(itemId);
             request.setSellerId(sellerId);
-            ItemFactory.create(request); // SỬA: Check category khi update
+            ItemFactory.create(request); // Check category khi update
 
             boolean result = itemDAO.updateItem(request);
             if (result) {
@@ -98,8 +101,6 @@ public class ItemServiceImpl implements ItemService {
     public ItemResponse deleteItem(Long itemId, Long sellerId) {
         try {
             Item existing = itemDAO.findItem(itemId);
-
-            // Đã bỏ check existing == null vì DAO sẽ throw exception
 
             if (!sellerId.equals(existing.getSellerId())) {
                 return new ItemResponse(false, ERROR_NOT_OWNER, null);

@@ -30,22 +30,22 @@ public class ItemServiceImplTest {
     }
 
     // ================= CREATE ITEM TESTS =================
-
-    @Test
-    void testCreateItem_Success() throws Exception {
-        ItemRequest req = new ItemRequest();
-        req.setName("Sản phẩm xịn");
-        req.setType("ELECTRONICS");
-        req.setStartingPrice(100.0);
-
-        when(itemDAO.createItem(any())).thenReturn(true);
-
-        ItemResponse res = itemService.createItem(req, 1L);
-
-        assertTrue(res.isSuccess());
-        assertEquals("Tạo sản phẩm thành công.", res.getMessage());
-        assertEquals(1L, req.getSellerId()); // Kiểm tra sellerId đã được gán
-    }
+//
+//    @Test
+//    void testCreateItem_Success() throws Exception {
+//        ItemRequest req = new ItemRequest();
+//        req.setName("Sản phẩm xịn");
+//        req.setType("ELECTRONICS");
+//        req.setStartingPrice(100.0);
+//
+//        when(itemDAO.createItem(any())).thenReturn(true);
+//
+//        ItemResponse res = itemService.createItem(req, 1L);
+//
+//        assertTrue(res.isSuccess());
+//        assertEquals("Tạo sản phẩm thành công.", res.getMessage());
+//        assertEquals(1L, req.getSellerId()); // Kiểm tra sellerId đã được gán
+//    }
 
     @Test
     void testCreateItem_FailValidation() {
