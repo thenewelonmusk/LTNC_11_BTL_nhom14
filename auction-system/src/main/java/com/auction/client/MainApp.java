@@ -10,10 +10,11 @@ public class MainApp extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception {
-        // Đảm bảo bạn đã có file Login.fxml trong thư mục resources
-        Parent root = FXMLLoader.load(getClass().getResource("/fxml/TestDashboard.fxml"));
-        primaryStage.setTitle("Hệ Thống Đấu Giá Lập Trình Nâng Cao");
-        primaryStage.setScene(new Scene(root, 400, 300));
+        Parent root = FXMLLoader.load(getClass().getResource("/fxml/MainWindow.fxml"));
+        primaryStage.setTitle("Hệ Thống Đấu Giá – Nhóm 14");
+        primaryStage.setScene(new Scene(root, 1180, 720));
+        primaryStage.setMinWidth(960);
+        primaryStage.setMinHeight(620);
         primaryStage.show();
     }
 

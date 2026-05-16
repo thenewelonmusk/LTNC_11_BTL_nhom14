@@ -7,22 +7,16 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 
 public class ClientApp extends Application {
-    public static void main(String[] args){launch(args);}
+    public static void main(String[] args) { launch(args); }
 
     @Override
     public void start(Stage stage) throws Exception {
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("LoginFrame.fxml"));
-        Parent root = loader.load();
-
-        Scene scene= new Scene(root);
+        Parent root = FXMLLoader.load(getClass().getResource("/fxml/MainWindow.fxml"));
+        Scene scene = new Scene(root, 1180, 720);
         stage.setScene(scene);
-        stage.setTitle("Auction System");
+        stage.setTitle("Hệ Thống Đấu Giá – Nhóm 14");
+        stage.setMinWidth(960);
+        stage.setMinHeight(620);
         stage.show();
-
-
-
-
-
     }
-
 }

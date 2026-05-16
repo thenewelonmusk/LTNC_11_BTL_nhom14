@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane fx:id="rootPane" prefHeight="720.0" prefWidth="1180.0" stylesheets="@../css/styles.css"
+            xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.auction.client.controller.MainWindowController">
+
+    <!-- ===== HEADER ===== -->
+    <top>
+        <HBox fx:id="header" alignment="CENTER_LEFT" spacing="16.0" styleClass="app-header">
+            <VBox spacing="2.0">
+                <Label styleClass="app-title" text="🏛  HỆ THỐNG ĐẤU GIÁ TRỰC TUYẾN" />
+                <Label styleClass="app-subtitle" text="Auction System – Lập trình nâng cao – Nhóm 14" />
+            </VBox>
+            <Region HBox.hgrow="ALWAYS" />
+            <Label fx:id="lblUserChip" styleClass="user-chip" text="Chưa đăng nhập" />
+            <Button fx:id="btnLogout" onAction="#handleLogout" styleClass="logout-button" text="Đăng xuất" visible="false" managed="false" />
+        </HBox>
+    </top>
+
+    <!-- ===== SIDEBAR (left) ===== -->
+    <left>
+        <VBox fx:id="sidebar" styleClass="sidebar" visible="false" managed="false">
+            <Label styleClass="sidebar-section" text="CHUNG" />
+            <Button fx:id="navHome"          onAction="#showHome"           styleClass="nav-button" text="🏠   Trang chủ" />
+
+            <Label fx:id="lblSecBidder"      styleClass="sidebar-section" text="DÀNH CHO BIDDER" visible="false" managed="false" />
+            <Button fx:id="navBrowse"        onAction="#showBrowseAuctions" styleClass="nav-button" text="🔍   Xem phiên đấu giá"  visible="false" managed="false" />
+            <Button fx:id="navAuctionDetail" onAction="#showAuctionDetail"  styleClass="nav-button" text="🎯   Chi tiết phiên"      visible="false" managed="false" />
+            <Button fx:id="navMyBids"        onAction="#showMyBids"         styleClass="nav-button" text="📜   Lịch sử bid của tôi" visible="false" managed="false" />
+
+            <Label fx:id="lblSecSeller"      styleClass="sidebar-section" text="DÀNH CHO SELLER" visible="false" managed="false" />
+            <Button fx:id="navMyItems"       onAction="#showMyItems"        styleClass="nav-button" text="📦   Sản phẩm của tôi"    visible="false" managed="false" />
+            <Button fx:id="navItemForm"      onAction="#showItemForm"       styleClass="nav-button" text="➕   Tạo / sửa sản phẩm"  visible="false" managed="false" />
+            <Button fx:id="navMyAuctions"    onAction="#showMyAuctions"     styleClass="nav-button" text="🛎   Phiên đấu giá của tôi" visible="false" managed="false" />
+            <Button fx:id="navOpenAuction"   onAction="#showOpenAuction"    styleClass="nav-button" text="🚀   Mở phiên đấu giá"    visible="false" managed="false" />
+        </VBox>
+    </left>
+
+    <!-- ===== CONTENT ===== -->
+    <center>
+        <StackPane fx:id="contentArea" styleClass="content-area">
+            <padding><Insets bottom="0" left="0" right="0" top="0" /></padding>
+        </StackPane>
+    </center>
+
+</BorderPane>
