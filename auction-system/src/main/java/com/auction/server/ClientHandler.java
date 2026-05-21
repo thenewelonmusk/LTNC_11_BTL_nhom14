@@ -3,7 +3,6 @@ package com.auction.server;
 import com.auction.dao.*;
 import com.auction.dto.*;
 import com.auction.model.Auction;
-import com.auction.model.AutoBidEntry;
 import com.auction.model.BidTransaction;
 import com.auction.model.item.Item;
 import com.auction.service.*;
@@ -25,7 +24,6 @@ public class ClientHandler implements Runnable {
 	private ItemService itemService;
 	private AuctionService auctionService;
 	private BidService bidService;
-	private AutoBidService autoBidService;
 	private ItemDAO itemDAO; // dùng trực tiếp cho GET_AUCTION_DETAIL
 
 	public ClientHandler(Socket socket) {
@@ -233,57 +231,6 @@ public class ClientHandler implements Runnable {
 						root.add("item", itemJson);
 						root.add("bids", bidsArr);
 						jsonResponse = gson.toJson(root);
-						break;
-					}
-
-					// ===== Auto-Bidding =====
-
-					case "REGISTER_AUTO_BID" : {
-						AutoBidRequest abReq = gson.fromJson(dataObj, AutoBidRequest.class);
-						AutoBidResponse abRes = autoBidService.registerAutoBid(abReq);
-						jsonResponse = gson.toJson(abRes);
-
-						// Sau khi đăng ký thành công, kích hoạt vòng đấu auto-bid
-						// (bidder có maxBid cao hơn giá hiện tại có thể đặt được ngay).
-						// Gọi qua placeBid của chính bidder để tận dụng lock của BidServiceImpl
-						// là không phù hợp ở đây (bidder không tự đặt giá tay).
-						// Ta gọi triggerAutoBids trực tiếp - service tự xử lý đồng bộ.
-						if (abRes.isSuccess()) {
-							autoBidService.triggerAutoBids(abReq.getAuctionId());
-						}
-						break;
-					}
-
-					case "CANCEL_AUTO_BID" : {
-						Long auctionId = dataObj.has("auctionId") ? dataObj.get("auctionId").getAsLong() : null;
-						Long bidderId = dataObj.has("bidderId") ? dataObj.get("bidderId").getAsLong() : null;
-						AutoBidResponse abRes = autoBidService.cancelAutoBid(auctionId, bidderId);
-						jsonResponse = gson.toJson(abRes);
-						break;
-					}
-
-					case "GET_MY_AUTO_BIDS" : {
-						Long bidderId = dataObj.has("bidderId") ? dataObj.get("bidderId").getAsLong() : null;
-						if (bidderId == null) {
-							jsonResponse = "{\"success\":false, \"message\":\"Thiếu bidderId\"}";
-						} else {
-							List<AutoBidEntry> entries = autoBidService.getAutoBidsByBidder(bidderId);
-							JsonArray arr = new JsonArray();
-							for (AutoBidEntry e : entries) {
-								JsonObject o = new JsonObject();
-								o.addProperty("id", e.getId());
-								o.addProperty("auctionId", e.getAuctionId());
-								o.addProperty("maxBid", e.getMaxBid());
-								o.addProperty("increment", e.getIncrement());
-								o.addProperty("registeredAt",
-										e.getRegisteredAt() != null ? e.getRegisteredAt().toString() : "");
-								o.addProperty("active", e.isActive());
-								arr.add(o);
-							}
-							JsonObject root = new JsonObject();
-							root.add("autoBids", arr);
-							jsonResponse = gson.toJson(root);
-						}
 						break;
 					}
 
