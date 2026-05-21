@@ -10,14 +10,14 @@ import javafx.stage.Stage;
 import java.io.IOException;
 
 public class AuctionFrameController {
-    private Stage stage;
-    private Scene scene;
-    private Parent root;
-    public void back(ActionEvent actionEvent) throws IOException {
-        root = FXMLLoader.load(getClass().getResource("HomePage.fxml"));
-        stage = (Stage)((Node)actionEvent.getSource()).getScene().getWindow();
-        scene= new Scene(root);
-        stage.setScene(scene);
-        stage.show();
-    }
+	private Stage stage;
+	private Scene scene;
+	private Parent root;
+	public void back(ActionEvent actionEvent) throws IOException {
+		root = FXMLLoader.load(getClass().getResource("HomePage.fxml"));
+		stage = (Stage) ((Node) actionEvent.getSource()).getScene().getWindow();
+		scene = new Scene(root);
+		stage.setScene(scene);
+		stage.show();
+	}
 }

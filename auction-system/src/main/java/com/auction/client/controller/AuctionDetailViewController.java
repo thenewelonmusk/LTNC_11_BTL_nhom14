@@ -29,17 +29,27 @@ import java.util.Locale;
 
 public class AuctionDetailViewController {
 
-    @FXML private TextField txtAuctionId;
-    @FXML private Label lblItemName, lblItemType, lblItemDesc;
-    @FXML private Label lblStatus, lblStart, lblCurrent, lblEnd;
-    @FXML private TextField txtBidAmount;
-    @FXML private Label lblBidResult;
+    @FXML
+    private TextField txtAuctionId;
+    @FXML
+    private Label lblItemName, lblItemType, lblItemDesc;
+    @FXML
+    private Label lblStatus, lblStart, lblCurrent, lblEnd;
+    @FXML
+    private TextField txtBidAmount;
+    @FXML
+    private Label lblBidResult;
 
-    @FXML private TableView<BidRow> tblBids;
-    @FXML private TableColumn<BidRow, String> colBidId;
-    @FXML private TableColumn<BidRow, String> colBidder;
-    @FXML private TableColumn<BidRow, String> colAmount;
-    @FXML private TableColumn<BidRow, String> colBidTime;
+    @FXML
+    private TableView<BidRow> tblBids;
+    @FXML
+    private TableColumn<BidRow, String> colBidId;
+    @FXML
+    private TableColumn<BidRow, String> colBidder;
+    @FXML
+    private TableColumn<BidRow, String> colAmount;
+    @FXML
+    private TableColumn<BidRow, String> colBidTime;
 
     private final ObservableList<BidRow> bids = FXCollections.observableArrayList();
     private final NumberFormat fmt = NumberFormat.getInstance(new Locale("vi", "VN"));
@@ -47,14 +57,17 @@ public class AuctionDetailViewController {
 
     private final Gson gson = new GsonBuilder()
             .registerTypeAdapter(LocalDateTime.class, new TypeAdapter<LocalDateTime>() {
-                @Override public void write(JsonWriter out, LocalDateTime value) throws IOException {
+                @Override
+                public void write(JsonWriter out, LocalDateTime value) throws IOException {
                     out.value(value != null ? value.toString() : null);
                 }
-                @Override public LocalDateTime read(JsonReader in) throws IOException {
+
+                @Override
+                public LocalDateTime read(JsonReader in) throws IOException {
                     return LocalDateTime.parse(in.nextString());
                 }
             }).create();
-
+	
     @FXML
     public void initialize() {
         colBidId.setCellValueFactory(c -> c.getValue().id);
@@ -74,12 +87,13 @@ public class AuctionDetailViewController {
     @FXML
     public void handleBack() {
         MainWindowController main = MainWindowController.get();
-        if (main != null) main.showBrowseAuctions();
+        if (main != null)
+            main.showBrowseAuctions();
     }
 
     /**
-     * Gọi server "GET_AUCTION_DETAIL" để lấy chi tiết. Nếu server chưa hỗ trợ,
-     * chỉ hiển thị ID/Trạng thái với giá trị mặc định.
+     * Gọi server "GET_AUCTION_DETAIL" để lấy chi tiết. Nếu server chưa hỗ trợ, chỉ
+     * hiển thị ID/Trạng thái với giá trị mặc định.
      */
     @FXML
     public void handleLoad() {
@@ -92,11 +106,13 @@ public class AuctionDetailViewController {
         payload.addProperty("auctionId", id);
 
         String json = NetworkClient.getInstance().sendAndReceive("GET_AUCTION_DETAIL", payload);
-        if (json == null) return;
+        if (json == null)
+            return;
 
         try {
             JsonElement el = JsonParser.parseString(json);
-            if (!el.isJsonObject()) return;
+            if (!el.isJsonObject())
+                return;
             JsonObject o = el.getAsJsonObject();
 
             if (o.has("auction") && o.get("auction").isJsonObject()) {
@@ -109,9 +125,12 @@ public class AuctionDetailViewController {
                 String status = getStr(a, "status");
                 lblStatus.setText(status);
                 lblStatus.getStyleClass().removeAll("status-open", "status-closed", "status-end");
-                if (status.toUpperCase().contains("OPEN"))      lblStatus.getStyleClass().add("status-open");
-                else if (status.toUpperCase().contains("CLOSE")) lblStatus.getStyleClass().add("status-closed");
-                else                                             lblStatus.getStyleClass().add("status-end");
+                if (status.toUpperCase().contains("OPEN"))
+                    lblStatus.getStyleClass().add("status-open");
+                else if (status.toUpperCase().contains("CLOSE"))
+                    lblStatus.getStyleClass().add("status-closed");
+                else
+                    lblStatus.getStyleClass().add("status-end");
             }
             if (o.has("item") && o.get("item").isJsonObject()) {
                 JsonObject it = o.getAsJsonObject("item");
@@ -131,13 +150,14 @@ public class AuctionDetailViewController {
                     bids.add(r);
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
     }
 
     @FXML
     public void handlePlaceBid() {
         Long auctionId = parseLong(txtAuctionId.getText());
-        Double amount  = parseDouble(txtBidAmount.getText());
+        Double amount = parseDouble(txtBidAmount.getText());
 
         if (auctionId == null) {
             alert(Alert.AlertType.WARNING, "Thiếu ID phiên", "Hãy chọn/nhập ID phiên đấu giá.");
@@ -173,26 +193,42 @@ public class AuctionDetailViewController {
         }
     }
 
-    private Long parseLong(String s)  { try { return Long.parseLong(s.trim());   } catch (Exception e) { return null; } }
-    private Double parseDouble(String s) { try { return Double.parseDouble(s.trim()); } catch (Exception e) { return null; } }
+    private Long parseLong(String s) {
+        try {
+            return Long.parseLong(s.trim());
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private Double parseDouble(String s) {
+        try {
+            return Double.parseDouble(s.trim());
+        } catch (Exception e) {
+            return null;
+        }
+    }
 
     private static String getStr(JsonObject o, String k) {
         return o.has(k) && !o.get(k).isJsonNull() ? o.get(k).getAsString() : "";
     }
+
     private static double getDouble(JsonObject o, String k) {
         return o.has(k) && !o.get(k).isJsonNull() ? o.get(k).getAsDouble() : 0;
     }
 
     private void alert(Alert.AlertType type, String title, String content) {
         Alert a = new Alert(type);
-        a.setTitle(title); a.setHeaderText(null); a.setContentText(content);
+        a.setTitle(title);
+        a.setHeaderText(null);
+        a.setContentText(content);
         a.showAndWait();
     }
 
     public static class BidRow {
-        final SimpleStringProperty id     = new SimpleStringProperty();
+        final SimpleStringProperty id = new SimpleStringProperty();
         final SimpleStringProperty bidder = new SimpleStringProperty();
         final SimpleStringProperty amount = new SimpleStringProperty();
-        final SimpleStringProperty time   = new SimpleStringProperty();
+        final SimpleStringProperty time = new SimpleStringProperty();
     }
 }
