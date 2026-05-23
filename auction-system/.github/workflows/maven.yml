@@ -1,0 +1,30 @@
+name: Java CI/CD with Maven
+
+# 1. Định nghĩa sự kiện kích hoạt (Trigger): Chạy tự động khi có push hoặc pull request vào nhánh main
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build-and-test:
+    # Hệ điều hành giả lập chạy môi trường kiểm thử
+    runs-on: ubuntu-latest
+
+    steps:
+      # Bước 1: Tải mã nguồn từ kho lưu trữ GitHub về máy chủ ảo của GitHub Actions
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      # Bước 2: Thiết lập môi trường Java JDK (BTL của bạn dùng bản nào thì điền bản đó, ví dụ JDK 17 hoặc 21)
+      - name: Set up JDK 17
+        uses: actions/actions-setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      # Bước 3: Biên dịch mã nguồn và tự động chạy toàn bộ hệ thống Unit Test (JUnit/Mockito)
+      - name: Build project and Run Unit Tests with Maven
+        run: mvn clean test
