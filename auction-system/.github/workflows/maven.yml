@@ -3,9 +3,9 @@ name: Java CI/CD with Maven
 # 1. Định nghĩa sự kiện kích hoạt (Trigger): Chạy tự động khi có push hoặc pull request vào nhánh main
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ "test-branch2", "master" ]
   pull_request:
-    branches: [ "main", "master" ]
+    branches: [ "test-branch2", "master" ]
 
 jobs:
   build-and-test:
