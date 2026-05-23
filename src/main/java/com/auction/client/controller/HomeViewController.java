@@ -61,7 +61,8 @@ public class HomeViewController {
 						main.showAuctionDetail(auctionId);
 					} catch (NumberFormatException e) {
 						// Xử lý an toàn nếu người dùng cố tình nhập chữ thay vì nhập số
-						javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.ERROR);
+						javafx.scene.control.Alert alert = new javafx.scene.control.Alert(
+								javafx.scene.control.Alert.AlertType.ERROR);
 						alert.setTitle("Lỗi định dạng");
 						alert.setHeaderText(null);
 						alert.setContentText("Mã phiên đấu giá bắt buộc phải là một số nguyên hợp lệ!");

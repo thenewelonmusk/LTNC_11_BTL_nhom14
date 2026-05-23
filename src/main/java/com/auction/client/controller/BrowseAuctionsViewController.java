@@ -146,8 +146,7 @@ public class BrowseAuctionsViewController {
 				r.endTime.set(getStr(o, "endTime"));
 				r.status.set(getStr(o, "status"));
 
-				if (filter == null || filter.isEmpty()
-						|| r.name.get().toLowerCase(Locale.ROOT).contains(filter)
+				if (filter == null || filter.isEmpty() || r.name.get().toLowerCase(Locale.ROOT).contains(filter)
 						|| r.id.get().contains(filter)) {
 					data.add(r);
 				}

@@ -32,21 +32,18 @@ public class NetworkClient {
 	}
 
 	private NetworkClient() {
-		this.gson = new GsonBuilder()
-				.registerTypeAdapter(LocalDateTime.class, new TypeAdapter<LocalDateTime>() {
-					@Override
-					public void write(JsonWriter out, LocalDateTime value) throws IOException {
-						out.value(value != null ? value.toString() : null);
-					}
-					@Override
-					public LocalDateTime read(JsonReader in) throws IOException {
-						return LocalDateTime.parse(in.nextString());
-					}
-				}).create();
+		this.gson = new GsonBuilder().registerTypeAdapter(LocalDateTime.class, new TypeAdapter<LocalDateTime>() {
+			@Override
+			public void write(JsonWriter out, LocalDateTime value) throws IOException {
+				out.value(value != null ? value.toString() : null);
+			}
+			@Override
+			public LocalDateTime read(JsonReader in) throws IOException {
+				return LocalDateTime.parse(in.nextString());
+			}
+		}).create();
 		connect();
 	}
-
-
 
 	public static synchronized NetworkClient getInstance() {
 		if (instance == null) {
@@ -88,7 +85,8 @@ public class NetworkClient {
 								listener.onAuctionUpdate(data);
 							}
 						} else {
-							// Nếu là gói phản hồi Request-Response thông thường -> ném qua Exchanger cho luồng đang đợi
+							// Nếu là gói phản hồi Request-Response thông thường -> ném qua Exchanger cho
+							// luồng đang đợi
 							responseExchanger.exchange(line);
 						}
 					} catch (Exception e) {
@@ -121,7 +119,8 @@ public class NetworkClient {
 			// Gửi dữ liệu lên Server
 			out.println(requestMessage);
 
-			// Khóa chặn luồng và đứng đợi luồng ngầm startListening đẩy dữ liệu phản hồi về qua đây
+			// Khóa chặn luồng và đứng đợi luồng ngầm startListening đẩy dữ liệu phản hồi về
+			// qua đây
 			return responseExchanger.exchange(null);
 
 		} catch (InterruptedException e) {

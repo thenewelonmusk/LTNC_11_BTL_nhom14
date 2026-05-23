@@ -38,8 +38,8 @@ public class BidServiceImpl implements BidService {
 	// Quản lý khóa chống đụng độ (Concurrent Bidding)
 	private final ConcurrentHashMap<Long, ReentrantLock> auctionLocks = new ConcurrentHashMap<>();
 
-	public BidServiceImpl(BidDAO bidDAO, AuctionDAO auctionDAO,
-						  AuctionService auctionService, AutoBidService autoBidService) {
+	public BidServiceImpl(BidDAO bidDAO, AuctionDAO auctionDAO, AuctionService auctionService,
+			AutoBidService autoBidService) {
 		this.bidDAO = bidDAO;
 		this.auctionDAO = auctionDAO;
 		this.auctionService = auctionService;
@@ -50,7 +50,7 @@ public class BidServiceImpl implements BidService {
 	 * Constructor tương thích ngược (không dùng auto-bid).
 	 */
 	public BidServiceImpl(BidDAO bidDAO, AuctionDAO auctionDAO, AuctionService auctionService) {
-		this(bidDAO, auctionDAO, auctionService,null);
+		this(bidDAO, auctionDAO, auctionService, null);
 	}
 
 	@Override
@@ -77,8 +77,8 @@ public class BidServiceImpl implements BidService {
 				// Đọc lại giá mới nhất từ DB để client thấy đúng kết quả cuối.
 				try {
 					Auction refreshed = auctionDAO.findAuction(auctionId);
-					response = new BidResponse(true,response.getMessage(),
-							response.getBid(),refreshed.getCurrentPrice());
+					response = new BidResponse(true, response.getMessage(), response.getBid(),
+							refreshed.getCurrentPrice());
 				} catch (Exception ignore) {
 					// Giữ nguyên response cũ nếu đọc lại lỗi.
 				}
@@ -128,7 +128,8 @@ public class BidServiceImpl implements BidService {
 				System.out.println("[Anti-Sniping] Phiên " + auctionId + " được tự động gia hạn thêm 60 giây!");
 
 				auctionDAO.updateAuction(auction);
-				return new BidResponse(true, "Đặt giá thành công & Hệ thống đã tự động gia hạn phiên đấu giá!", bid, amount);
+				return new BidResponse(true, "Đặt giá thành công & Hệ thống đã tự động gia hạn phiên đấu giá!", bid,
+						amount);
 			}
 
 			auctionDAO.updateAuction(auction);

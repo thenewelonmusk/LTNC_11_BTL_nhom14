@@ -56,7 +56,8 @@ public class ClientHandler implements Runnable {
 		this.itemService = new ItemServiceImpl(itemDAO);
 		this.auctionService = new AuctionServiceImpl(this.auctionDAO, itemDAO);
 
-		// Giả sử constructor của BidServiceImpl có hỗ trợ tham số thứ 4 là null cho AutoBidService nếu bạn dùng bản tương thích ngược
+		// Giả sử constructor của BidServiceImpl có hỗ trợ tham số thứ 4 là null cho
+		// AutoBidService nếu bạn dùng bản tương thích ngược
 		this.bidService = new BidServiceImpl(bidDAO, this.auctionDAO, this.auctionService);
 
 		try {
@@ -71,8 +72,8 @@ public class ClientHandler implements Runnable {
 	}
 
 	/**
-	 * PHƯƠNG THỨC PHÁT TIN BROADCAST (Observer Pattern qua Socket)
-	 * Đẩy thông điệp JSON tới tất cả các Client đang bật ứng dụng
+	 * PHƯƠNG THỨC PHÁT TIN BROADCAST (Observer Pattern qua Socket) Đẩy thông điệp
+	 * JSON tới tất cả các Client đang bật ứng dụng
 	 */
 	public static void broadcastUpdate(String updateMessage) {
 		for (ClientHandler handler : activeHandlers) {
@@ -133,7 +134,8 @@ public class ClientHandler implements Runnable {
 						BidResponse bRes = bidService.placeBid(bReq, bReq.getUserId());
 						jsonResponse = gson.toJson(bRes);
 
-						// ĐẢM BẢO AN TOÀN LUỒNG: Chỉ phát tin Broadcast khi giao dịch đặt giá thực sự thành công
+						// ĐẢM BẢO AN TOÀN LUỒNG: Chỉ phát tin Broadcast khi giao dịch đặt giá thực sự
+						// thành công
 						if (bRes != null && bRes.isSuccess() && bRes.getBid() != null) {
 							JsonObject broadcastObj = new JsonObject();
 							broadcastObj.addProperty("action", "AUCTION_UPDATE");
@@ -152,7 +154,7 @@ public class ClientHandler implements Runnable {
 								} else {
 									dataFields.addProperty("endTime", LocalDateTime.now().toString());
 								}
-							} catch(Exception ignored) {
+							} catch (Exception ignored) {
 								dataFields.addProperty("endTime", LocalDateTime.now().toString());
 							}
 
