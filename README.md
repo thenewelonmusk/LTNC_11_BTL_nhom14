@@ -72,7 +72,7 @@ Nhập mật khẩu MySQL khi được yêu cầu.
 ```sql
 USE auction_db;
 SHOW TABLES;
--- Phải thấy: users, items, auctions, bids, auto_bids
+-- Phải thấy: users, items, auctions, bids
 
 SELECT username, role FROM users;
 -- Phải có 6 dòng tài khoản mẫu
@@ -161,7 +161,6 @@ Script `schema.sql` đã tạo sẵn các tài khoản sau:
                                                   ▼
                                           ┌──────────────┐
                                           │     bids     │
-                                          │ + auto_bids  │
                                           └──────────────┘
 ```
 
@@ -171,7 +170,6 @@ Script `schema.sql` đã tạo sẵn các tài khoản sau:
 | **items**     | Sản phẩm do seller đăng |
 | **auctions**  | Phiên đấu giá gắn với 1 sản phẩm |
 | **bids**      | Lịch sử đặt giá — nguồn dữ liệu cho biểu đồ realtime |
-| **auto_bids** | Đăng ký đấu giá tự động (max bid + bước nhảy) |
 
 Tất cả khóa ngoại đều có `ON DELETE CASCADE` (trừ `winner_id` dùng `SET NULL`), nên khi xóa user/item sẽ tự dọn dữ liệu phụ thuộc.
 

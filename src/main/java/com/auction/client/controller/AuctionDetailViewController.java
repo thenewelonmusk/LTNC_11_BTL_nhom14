@@ -78,16 +78,6 @@ public class AuctionDetailViewController implements NetworkClient.AuctionUpdateL
 	@FXML
 	private Label lblBidResult;
 
-	// ---- Auto Bid ----
-	@FXML
-	private javafx.scene.control.CheckBox chkEnableAutoBid;
-	@FXML
-	private TextField txtAutoBidMax;
-	@FXML
-	private TextField txtAutoBidIncrement;
-	@FXML
-	private Button btnSaveAutoBid;
-
 	// ---- Chart ----
 	@FXML
 	private LineChart<Number, Number> priceChart;
@@ -300,8 +290,7 @@ public class AuctionDetailViewController implements NetworkClient.AuctionUpdateL
 				String bidderName = getStr(b, "bidderName", getStr(b, "bidder", ""));
 				double amount = getDouble(b, "amount");
 				String bidTime = getStr(b, "bidTime", getStr(b, "time", ""));
-				boolean isAuto = b.has("autoBid") && !b.get("autoBid").isJsonNull() && b.get("autoBid").getAsBoolean();
-				bidsList.add(new BidRow(bidId, bidderName, amount, bidTime, isAuto));
+				bidsList.add(new BidRow(bidId, bidderName, amount, bidTime));
 				bidCount++;
 				if (amount > peakPrice) {
 					peakPrice = amount;
@@ -561,46 +550,74 @@ public class AuctionDetailViewController implements NetworkClient.AuctionUpdateL
 		}
 
 		double newPrice = data.has("currentPrice") ? data.get("currentPrice").getAsDouble() : 0.0;
+		String newStatus = getStr(data, "status", null);
 		String newEndTime = getStr(data, "endTime", lblEnd != null ? lblEnd.getText() : "");
-		String msg = getStr(data, "message", "Có lượt đặt giá mới!");
+		String msg = getStr(data, "message", "Cập nhật từ Server!");
 		String bidderName = getStr(data, "bidderName", "Đối thủ");
 		String bidTime = getStr(data, "bidTime", "Vừa xong");
 		String bidId = getStr(data, "bidId", "");
-		boolean isAuto = data.has("autoBid") && !data.get("autoBid").isJsonNull() && data.get("autoBid").getAsBoolean();
 
 		Platform.runLater(() -> {
-			if (lblCurrent != null) {
-				lblCurrent.setText(formatMoney(newPrice));
-			}
-			// SỬA: chỉ rebuild countdown khi endTime thực sự thay đổi
-			// -> tránh giật label mỗi khi có auto-bid liên tiếp.
-			if (lblEnd != null && newEndTime != null && !newEndTime.isBlank()) {
-				String old = lblEnd.getText();
-				if (!newEndTime.equals(old)) {
-					lblEnd.setText(newEndTime);
-					setupCountdown(newEndTime);
+			// Cập nhật giá nếu có bid mới
+			if (newPrice > 0 && bidId != null && !bidId.isEmpty()) {
+				if (lblCurrent != null) {
+					lblCurrent.setText(formatMoney(newPrice));
 				}
+				// SỬA: chỉ rebuild countdown khi endTime thực sự thay đổi
+				// -> tránh giật label mỗi khi có bid liên tiếp.
+				if (lblEnd != null && newEndTime != null && !newEndTime.isBlank()) {
+					String old = lblEnd.getText();
+					if (!newEndTime.equals(old)) {
+						lblEnd.setText(newEndTime);
+						setupCountdown(newEndTime);
+					}
+				}
+
+				// 1) Thêm dòng vào bảng (đầu danh sách)
+				bidsList.add(0, new BidRow(bidId, bidderName, newPrice, bidTime));
+
+				// 2) 📈 Thêm điểm mới vào biểu đồ realtime
+				appendChartPoint(newPrice);
+
+				// 3) Cập nhật label thống kê + bidder cao nhất
+				if (newPrice > peakPrice)
+					peakPrice = newPrice;
+				updateBidStats();
+				updateHighestBidderLabel();
+
+				if (lblBidResult != null) {
+					lblBidResult.setText("🔔 " + msg + " (" + bidderName + " - " + formatMoney(newPrice) + ")");
+				}
+
+				// Flash đèn LIVE
+				flashLive();
 			}
+			// Cập nhật trạng thái nếu có (từ status monitor)
+			else if (newStatus != null && !newStatus.isEmpty()) {
+				applyStatusStyle(newStatus);
+				System.out.println(
+						"[AuctionDetailViewController] Trạng thái phiên #" + currentAuctionId + " -> " + newStatus);
 
-			// 1) Thêm dòng vào bảng (đầu danh sách)
-			bidsList.add(0, new BidRow(bidId, bidderName, newPrice, bidTime, isAuto));
+				// Hiển thị thông báo trạng thái
+				if (lblBidResult != null) {
+					if ("FINISHED".equals(newStatus) || "FINISHED".equals(newStatus.toUpperCase())) {
+						lblBidResult.setText("⏹️ Phiên đấu giá đã kết thúc!");
+						if (btnPlaceBid != null) {
+							btnPlaceBid.setDisable(true);
+						}
+					} else if ("RUNNING".equals(newStatus) || "RUNNING".equals(newStatus.toUpperCase())) {
+						lblBidResult.setText("🎯 Phiên đấu giá đang diễn ra...");
+						if (btnPlaceBid != null) {
+							btnPlaceBid.setDisable(false);
+						}
+					} else {
+						lblBidResult.setText("📋 Trạng thái: " + newStatus);
+					}
+				}
 
-			// 2) 📈 Thêm điểm mới vào biểu đồ realtime
-			appendChartPoint(newPrice);
-
-			// 3) Cập nhật label thống kê + bidder cao nhất
-			if (newPrice > peakPrice)
-				peakPrice = newPrice;
-			updateBidStats();
-			updateHighestBidderLabel();
-
-			if (lblBidResult != null) {
-				String icon = isAuto ? "🤖" : "🔔";
-				lblBidResult.setText(icon + " " + msg + " (" + bidderName + " - " + formatMoney(newPrice) + ")");
+				// Flash đèn LIVE
+				flashLive();
 			}
-
-			// Flash đèn LIVE
-			flashLive();
 		});
 	}
 
@@ -774,68 +791,17 @@ public class AuctionDetailViewController implements NetworkClient.AuctionUpdateL
 		return o.has(k) && !o.get(k).isJsonNull() ? o.get(k).getAsDouble() : 0.0;
 	}
 
-	@FXML
-	private void handleSaveAutoBid() {
-		if (currentAuctionId == null) {
-			showMessage("Chưa chọn phiên đấu giá");
-			return;
-		}
-
-		javafx.concurrent.Task<Void> task = new javafx.concurrent.Task<>() {
-			@Override
-			protected Void call() {
-				try {
-					JsonObject payload = new JsonObject();
-					payload.addProperty("auctionId", currentAuctionId);
-					payload.addProperty("bidderId", Session.get().getUserId());
-
-					if (chkEnableAutoBid != null && chkEnableAutoBid.isSelected()) {
-						double maxBid = Double.parseDouble(txtAutoBidMax.getText());
-						double increment = Double.parseDouble(txtAutoBidIncrement.getText());
-
-						payload.addProperty("maxBid", maxBid);
-						payload.addProperty("increment", increment);
-
-						NetworkClient.getInstance().registerAutoBid(payload);
-						Platform.runLater(() -> showMessage("Auto Bid Enabled"));
-					} else {
-						NetworkClient.getInstance().cancelAutoBid(payload);
-						Platform.runLater(() -> showMessage("Auto Bid Disabled"));
-					}
-				} catch (Exception e) {
-					Platform.runLater(() -> showMessage("Không thể cấu hình Auto Bid"));
-				}
-				return null;
-			}
-		};
-
-		Thread thread = new Thread(task);
-		thread.setDaemon(true);
-		thread.start();
-	}
-
 	public static class BidRow {
 		private final SimpleStringProperty id;
 		private final SimpleStringProperty bidder;
 		private final SimpleDoubleProperty amount;
 		private final SimpleStringProperty time;
-		private final boolean autoBid;
 
 		public BidRow(String id, String bidder, double amount, String time) {
-			this(id, bidder, amount, time, false);
-		}
-
-		public BidRow(String id, String bidder, double amount, String time, boolean autoBid) {
 			this.id = new SimpleStringProperty(id);
-			// Hiển thị nhãn AUTO ngay cạnh tên cho dễ nhận biết.
-			String displayBidder = bidder == null ? "" : bidder;
-			if (autoBid && !displayBidder.contains("[AUTO]")) {
-				displayBidder = "🤖 " + displayBidder + " [AUTO]";
-			}
-			this.bidder = new SimpleStringProperty(displayBidder);
+			this.bidder = new SimpleStringProperty(bidder == null ? "" : bidder);
 			this.amount = new SimpleDoubleProperty(amount);
 			this.time = new SimpleStringProperty(time);
-			this.autoBid = autoBid;
 		}
 
 		public SimpleStringProperty idProperty() {
@@ -852,10 +818,6 @@ public class AuctionDetailViewController implements NetworkClient.AuctionUpdateL
 
 		public SimpleStringProperty timeProperty() {
 			return time;
-		}
-
-		public boolean isAutoBid() {
-			return autoBid;
 		}
 	}
 }

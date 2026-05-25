@@ -1,227 +1,419 @@
 package com.auction.server;
 
+import com.auction.dao.*;
 import com.auction.dto.*;
 import com.auction.model.Auction;
 import com.auction.model.BidTransaction;
-import com.auction.service.AuctionService;
-import com.auction.service.AutoBidService;
-import com.auction.service.BidService;
-import com.google.gson.Gson;
-import com.google.gson.JsonSyntaxException;
+import com.auction.model.item.Item;
+import com.auction.service.*;
+import com.auction.service.impl.*;
+import com.google.gson.*;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.Socket;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class ClientHandler implements Runnable {
 
-    // 1. Danh sách lưu trữ tất cả các client đang kết nối để làm Real-time Broadcast [cite: 346]
-    public static final List<PrintWriter> activeHandlers = new CopyOnWriteArrayList<>();
+	// DANH SÁCH QUẢN LÝ CÁC CLIENT ĐANG KẾT NỐI (Dùng cho Broadcast Real-time)
+	private static final CopyOnWriteArrayList<ClientHandler> activeHandlers = new CopyOnWriteArrayList<>();
 
-    private Socket socket;
-    private BufferedReader in;
-    private PrintWriter out;
-    private Gson gson;
+	// Cache username theo id để khỏi query lại trên mỗi broadcast
+	private static final ConcurrentHashMap<Long, String> usernameCache = new ConcurrentHashMap<>();
 
-    // 2. Các Service dùng chung (Singleton) truyền từ AuctionServer vào [cite: 1011, 1013]
-    private AuctionService auctionService;
-    private BidService bidService;
+	// Static Gson để dùng cho broadcast static methods
+	private static final Gson staticGson = new GsonBuilder()
+			.registerTypeAdapter(LocalDateTime.class, new TypeAdapter<LocalDateTime>() {
+				@Override
+				public void write(com.google.gson.stream.JsonWriter out, LocalDateTime value) throws IOException {
+					out.value(value != null ? value.toString() : null);
+				}
+				@Override
+				public LocalDateTime read(com.google.gson.stream.JsonReader in) throws IOException {
+					return LocalDateTime.parse(in.nextString());
+				}
+			}).create();
 
-    public ClientHandler(Socket socket, AuctionService auctionService, BidService bidService)  {
-        this.socket = socket;
-        this.auctionService = auctionService;
-        this.bidService = bidService;
-        this.gson = new Gson();
-    }
+	private Socket clientSocket;
+	private BufferedReader in;
+	private PrintWriter out;
+	private Gson gson;
 
-    @Override
-    public void run() {
-        try {
-            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            out = new PrintWriter(socket.getOutputStream(), true);
+	private UserService userService;
+	private ItemService itemService;
+	private AuctionService auctionService;
+	private BidService bidService;
 
-            // Thêm client này vào danh sách phát sóng chung
-            activeHandlers.add(out);
+	private UserDAO userDAO;
+	private ItemDAO itemDAO;
+	private AuctionDAO auctionDAO;
 
-            String requestLine;
-            while ((requestLine = in.readLine()) != null) {
-                // Tách Header (Hành động) và Payload (Dữ liệu JSON)
-                String[] parts = requestLine.split("\\|", 2);
-                String action = parts[0];
-                String dataObj = parts.length > 1 ? parts[1] : "";
+	public ClientHandler(Socket socket) {
+		this.clientSocket = socket;
 
-                // Phân luồng xử lý các Case trong hệ thống 
-                switch (action) {
-                    case "PLACE_BID":
-                        handlePlaceBid(dataObj);
-                        break;
-                    case "SETUP_AUTO_BID":
-                        handleSetupAutoBid(dataObj);
-                        break;
-                    case "LOGIN":
-                        handleLogin(dataObj);
-                        break;
-                    case "REGISTER":
-                        handleRegister(dataObj);
-                        break;
-                    case "LIST_MY_ITEMS":
-                    case "GET_ALL_AUCTIONS":
-                        // Thêm logic gọi AuctionService lấy danh sách ở đây
-                        // out.println("AUCTION_LIST|" + gson.toJson(auctionList));
-                        break;
-                    case "SAVE_ITEM":
-                        // Thêm logic gọi hàm lưu Item từ nhóm bạn ở đây
-                        break;
-                    default:
-                        System.out.println("[WARNING] Hành động không xác định từ Client: " + action);
-                }
-            }
-        } catch (Exception e) {
-            System.out.println("[INFO] Client ngắt kết nối hoặc có lỗi mạng: " + e.getMessage());
-        } finally {
-            // 3. Quan trọng: Dọn dẹp bộ nhớ khi Client thoát (Tránh Memory Leak) [cite: 349]
-            if (out != null) {
-                activeHandlers.remove(out);
-            }
-            try {
-                if (socket != null && !socket.isClosed()) {
-                    socket.close();
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    }
+		this.gson = new GsonBuilder().registerTypeAdapter(LocalDateTime.class, new TypeAdapter<LocalDateTime>() {
+			@Override
+			public void write(com.google.gson.stream.JsonWriter out, LocalDateTime value) throws IOException {
+				out.value(value != null ? value.toString() : null);
+			}
+			@Override
+			public LocalDateTime read(com.google.gson.stream.JsonReader in) throws IOException {
+				return LocalDateTime.parse(in.nextString());
+			}
+		}).create();
 
-    // ====================================================================================
-    // KHỐI XỬ LÝ LOGIC (CONTROLLER METHODS)
-    // ====================================================================================
+		this.userDAO = new UserDAO();
+		this.itemDAO = new ItemDAO();
+		this.auctionDAO = new AuctionDAO();
+		BidDAO bidDAO = new BidDAO();
 
-    /**
-     * Xử lý luồng đặt giá (Tích hợp Hàng đợi Auto-Bid và Anti-sniping) 
-     */
-    private void handlePlaceBid(String dataObj) {
-        try {
-            BidRequest bReq = gson.fromJson(dataObj, BidRequest.class);
-            List<BidTransaction> pendingAutoBids = new ArrayList<>();
+		this.userService = new UserServiceImpl(userDAO);
+		this.itemService = new ItemServiceImpl(itemDAO);
+		this.auctionService = new AuctionServiceImpl(this.auctionDAO, itemDAO);
+		this.bidService = new BidServiceImpl(bidDAO, this.auctionDAO, this.auctionService);
 
-            // 1. Gọi Service để xử lý bid. Nếu bot kích hoạt, nó sẽ ném giao dịch vào pendingAutoBids
-            BidResponse bRes = bidService.placeBid(bReq, bReq.getBidderId(), (autoBid, nextPrice) -> {
-                pendingAutoBids.add(autoBid);
-            });
+		try {
+			in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+			out = new PrintWriter(clientSocket.getOutputStream(), true);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 
-            // 2. Phản hồi kết quả lại cho chính Client vừa bấm nút
-            out.println("PLACE_BID_RESULT|" + gson.toJson(bRes));
+		activeHandlers.add(this);
+	}
 
-            // 3. Nếu đặt giá thất bại (lỗi logic), dừng lại không Broadcast
-            if (!bRes.isSuccess() || bRes.getBid() == null) {
-                return;
-            }
+	/**
+	 * PHƯƠNG THỨC PHÁT TIN BROADCAST (Observer Pattern qua Socket) Đẩy thông điệp
+	 * JSON tới tất cả các Client đang bật ứng dụng.
+	 *
+	 * SỬA: thêm synchronized trên handler.out để tránh hai broadcast cùng lúc ghi
+	 * xen kẽ vào cùng một PrintWriter -> tạo JSON hỏng trên client.
+	 */
+	public static void broadcastUpdate(String updateMessage) {
+		for (ClientHandler handler : activeHandlers) {
+			if (handler.out == null)
+				continue;
+			try {
+				synchronized (handler.out) {
+					handler.out.println(updateMessage);
+				}
+			} catch (Exception ignored) {
+			}
+		}
+	}
 
-            // 4. Lấy thời gian kết thúc (phòng trường hợp dính Anti-sniping gia hạn) [cite: 988]
-            LocalDateTime newEndTime = null;
-            try {
-                Auction currentAuction = auctionService.getAuctionById(bReq.getAuctionId());
-                if (currentAuction != null) {
-                    newEndTime = currentAuction.getEndTime();
-                }
-            } catch (Exception ignored) {}
+	/**
+	 * Phương thức broadcast cập nhật trạng thái auction (OPEN -> RUNNING, RUNNING
+	 * -> FINISHED) được gọi từ luồng monitor theo dõi trạng thái real-time
+	 */
+	public static void broadcastStatusUpdate(Long auctionId, String newStatus, LocalDateTime endTime) {
+		JsonObject broadcastObj = new JsonObject();
+		broadcastObj.addProperty("action", "AUCTION_UPDATE");
 
-            // 5. Broadcast giá của NGƯỜI THẬT lên trước
-            broadcastBid(bRes.getBid(), false, newEndTime);
+		JsonObject dataFields = new JsonObject();
+		dataFields.addProperty("auctionId", auctionId);
+		dataFields.addProperty("status", newStatus);
+		if (endTime != null) {
+			dataFields.addProperty("endTime", endTime.toString());
+		}
+		dataFields.addProperty("statusChangeTime", LocalDateTime.now().toString());
+		dataFields.addProperty("message", "Trạng thái phiên đấu giá được cập nhật: " + newStatus);
 
-            // 6. Xả hàng đợi: Broadcast lần lượt các giá của BOT AUTO-BID (tạo độ trễ UI) [cite: 863]
-            for (BidTransaction autoBid : pendingAutoBids) {
-                Thread.sleep(200); // Tạo độ trễ 200ms giúp UI nảy số mượt mà
-                broadcastBid(autoBid, true, newEndTime);
-            }
+		broadcastObj.add("data", dataFields);
+		broadcastUpdate(staticGson.toJson(broadcastObj));
+	}
 
-        } catch (JsonSyntaxException e) {
-            out.println("PLACE_BID_RESULT|{\"success\":false,\"message\":\"Dữ liệu gửi lên không hợp lệ.\"}");
-        } catch (Exception e) {
-            e.printStackTrace();
-            out.println("PLACE_BID_RESULT|{\"success\":false,\"message\":\"Lỗi máy chủ nội bộ.\"}");
-        }
-    }
+	/**
+	 * Tra cứu username (có cache). Trả về fallback "User #id" nếu không tìm thấy.
+	 */
+	private String resolveUsername(Long userId) {
+		if (userId == null)
+			return "Đối thủ";
+		String cached = usernameCache.get(userId);
+		if (cached != null)
+			return cached;
+		String fromDb = userDAO.findUsernameById(userId);
+		String name = fromDb != null ? fromDb : ("User #" + userId);
+		usernameCache.put(userId, name);
+		return name;
+	}
 
-    /**
-     * Xử lý luồng Client bấm nút "Lưu Auto-Bid"
-     */
-    private void handleSetupAutoBid(String dataObj) {
-        try {
-            AutoBidRequest req = gson.fromJson(dataObj, AutoBidRequest.class);
-            
-            // Gọi Service dùng chung (Singleton) để cài đặt Auto-Bid vào RAM [cite: 1014]
-            AutoBidResponse res = autoBidService.setupAutoBid(req, req.getBidderId());
-            
-            out.println("SETUP_AUTO_BID_RESULT|" + gson.toJson(res));
-        } catch (Exception e) {
-            out.println("SETUP_AUTO_BID_RESULT|{\"success\":false,\"message\":\"Lỗi thiết lập đấu giá tự động.\"}");
-        }
-    }
+	/**
+	 * Đóng gói broadcast cho một bid.
+	 */
+	private void broadcastBid(Long auctionId, BidTransaction bid, String overrideMessage) {
+		JsonObject broadcastObj = new JsonObject();
+		broadcastObj.addProperty("action", "AUCTION_UPDATE");
 
-    /**
-     * Xử lý Đăng nhập 
-     */
-    private void handleLogin(String dataObj) {
-        try {
-            // Tùy thuộc vào cấu trúc LoginRequest của nhóm bạn
-            // LoginRequest req = gson.fromJson(dataObj, LoginRequest.class);
-            // LoginResponse res = userService.login(req);
-            // out.println("LOGIN_RESULT|" + gson.toJson(res));
-            
-            System.out.println("[INFO] Nhận yêu cầu LOGIN: " + dataObj);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+		JsonObject dataFields = new JsonObject();
+		dataFields.addProperty("auctionId", auctionId);
+		if (bid != null) {
+			dataFields.addProperty("bidId", bid.getId());
+			dataFields.addProperty("currentPrice", bid.getAmount());
+			dataFields.addProperty("bidderId", bid.getBidderId());
+			dataFields.addProperty("bidderName", resolveUsername(bid.getBidderId()));
+			dataFields.addProperty("bidTime",
+					(bid.getBidTime() != null ? bid.getBidTime() : LocalDateTime.now()).toString());
+		} else {
+			dataFields.addProperty("bidTime", LocalDateTime.now().toString());
+		}
+		dataFields.addProperty("message", overrideMessage != null ? overrideMessage : "Có lượt đặt giá mới!");
 
-    /**
-     * Xử lý Đăng ký 
-     */
-    private void handleRegister(String dataObj) {
-         try {
-             // RegisterRequest req = gson.fromJson(dataObj, RegisterRequest.class);
-             // RegisterResponse res = userService.register(req);
-             // out.println("REGISTER_RESULT|" + gson.toJson(res));
-             
-             System.out.println("[INFO] Nhận yêu cầu REGISTER: " + dataObj);
-         } catch (Exception e) {
-             e.printStackTrace();
-         }
-    }
+		// Lấy endTime mới nhất từ DB (đã được persist nhờ AuctionDAO.updateAuction đã
+		// sửa).
+		try {
+			Auction currentAuction = auctionDAO.findAuction(auctionId);
+			if (currentAuction != null) {
+				if (currentAuction.getEndTime() != null) {
+					dataFields.addProperty("endTime", currentAuction.getEndTime().toString());
+				}
+				dataFields.addProperty("status",
+						currentAuction.getStatus() != null ? currentAuction.getStatus().name() : "");
+				if (bid == null) {
+					dataFields.addProperty("currentPrice", currentAuction.getCurrentPrice());
+				}
+			}
+		} catch (Exception ignored) {
+			dataFields.addProperty("endTime", LocalDateTime.now().toString());
+		}
 
-    // ====================================================================================
-    // KHỐI HÀM TIỆN ÍCH (HELPER METHODS)
-    // ====================================================================================
+		broadcastObj.add("data", dataFields);
+		broadcastUpdate(gson.toJson(broadcastObj));
+	}
 
-    /**
-     * Hàm phát sóng giao dịch mới tới tất cả các Client đang theo dõi phòng [cite: 983]
-     */
-    private void broadcastBid(BidTransaction bid, boolean isAuto, LocalDateTime newEndTime) {
-        // Gom dữ liệu cập nhật thành một Object hoặc chuỗi JSON
-        // Lưu ý: Tùy chỉnh class RealtimeUpdateResponse cho khớp với DTO bên bạn
-        String updatePayload = String.format(
-                "{\"bidId\":%d, \"auctionId\":%d, \"bidAmount\":%f, \"bidderId\":%d, \"isAuto\":%b, \"newEndTime\":\"%s\"}",
-                bid.getId(),
-                bid.getAuctionId(),
-                bid.getBidAmount(),
-                bid.getBidderId(),
-                isAuto,
-                (newEndTime != null ? newEndTime.toString() : "")
-        );
+	@Override
+	public void run() {
+		try {
+			String clientMessage;
+			while ((clientMessage = in.readLine()) != null) {
+				System.out.println("[Request từ Client]: " + clientMessage);
 
-        for (PrintWriter writer : activeHandlers) {
-            try {
-                writer.println("UPDATE_BID|" + updatePayload);
-            } catch (Exception e) {
-                System.out.println("[WARNING] Lỗi khi broadcast tới 1 client: " + e.getMessage());
-            }
-        }
-    }
+				JsonObject requestObj = JsonParser.parseString(clientMessage).getAsJsonObject();
+				String action = requestObj.get("action").getAsString();
+				JsonObject dataObj = requestObj.getAsJsonObject("data");
+
+				String jsonResponse;
+
+				switch (action) {
+					case "LOGIN" : {
+						LoginRequest loginReq = gson.fromJson(dataObj, LoginRequest.class);
+						LoginResponse loginRes = userService.login(loginReq);
+						jsonResponse = gson.toJson(loginRes);
+						break;
+					}
+					case "REGISTER" : {
+						RegisterRequest regReq = gson.fromJson(dataObj, RegisterRequest.class);
+						RegisterResponse regRes = userService.register(regReq);
+						jsonResponse = gson.toJson(regRes);
+						break;
+					}
+					case "SAVE_ITEM" : {
+						ItemRequest itemReq = gson.fromJson(dataObj, ItemRequest.class);
+						ItemResponse itemRes;
+						if (itemReq.getItemId() != null && itemReq.getItemId() > 0) {
+							itemRes = itemService.updateItem(itemReq.getItemId(), itemReq, itemReq.getSellerId());
+						} else {
+							itemRes = itemService.createItem(itemReq, itemReq.getSellerId());
+						}
+						jsonResponse = gson.toJson(itemRes);
+						break;
+					}
+					case "OPEN_AUCTION" : {
+						AuctionRequest aReq = gson.fromJson(dataObj, AuctionRequest.class);
+						AuctionResponse aRes = auctionService.openAuction(aReq, aReq.getSellerId());
+						jsonResponse = gson.toJson(aRes);
+						break;
+					}
+
+					case "PLACE_BID" : {
+						BidRequest bReq = gson.fromJson(dataObj, BidRequest.class);
+
+						// Thực thi nghiệp vụ đặt giá cốt lõi
+						BidResponse bRes = bidService.placeBid(bReq, bReq.getUserId());
+
+						// Gói kết quả để trả về cho Client vừa bấm nút (ẩn loading, báo thành công...)
+						jsonResponse = gson.toJson(bRes);
+
+						// Phát tin (Broadcast) cho mọi client đang xem phiên này
+						if (bRes != null && bRes.isSuccess() && bRes.getBid() != null) {
+							broadcastBid(bReq.getAuctionId(), bRes.getBid(), bRes.getMessage());
+						}
+						break;
+					}
+
+					// ===== Các action hỗ trợ giao diện =====
+
+					case "LIST_AUCTIONS" : {
+						jsonResponse = buildAuctionListJson(auctionService.getAllAuctions());
+						break;
+					}
+
+					case "LIST_MY_AUCTIONS" : {
+						Long sellerId = dataObj.has("sellerId") ? dataObj.get("sellerId").getAsLong() : null;
+						if (sellerId == null) {
+							jsonResponse = "{\"success\":false, \"message\":\"Thiếu sellerId\"}";
+						} else {
+							jsonResponse = buildAuctionListJson(auctionService.getAuctionsBySeller(sellerId));
+						}
+						break;
+					}
+
+					case "LIST_MY_ITEMS" : {
+						Long sellerId = dataObj.has("sellerId") ? dataObj.get("sellerId").getAsLong() : null;
+						if (sellerId == null) {
+							jsonResponse = "{\"success\":false, \"message\":\"Thiếu sellerId\"}";
+						} else {
+							List<Item> items = itemDAO.findBySeller(sellerId);
+							JsonArray arr = new JsonArray();
+							for (Item it : items) {
+								JsonObject o = new JsonObject();
+								o.addProperty("id", it.getId());
+								o.addProperty("name", it.getName());
+								o.addProperty("description", it.getDescription());
+								o.addProperty("type", it.getType());
+								o.addProperty("startingPrice", it.getStartingPrice());
+								arr.add(o);
+							}
+							JsonObject root = new JsonObject();
+							root.add("items", arr);
+							jsonResponse = gson.toJson(root);
+						}
+						break;
+					}
+
+					case "LIST_MY_BIDS" : {
+						Long userId = dataObj.has("userId") ? dataObj.get("userId").getAsLong() : null;
+						if (userId == null) {
+							jsonResponse = "{\"success\":false, \"message\":\"Thiếu userId\"}";
+						} else {
+							List<BidTransaction> bids = bidService.getBidsByBidder(userId);
+							JsonArray arr = new JsonArray();
+							for (BidTransaction b : bids) {
+								JsonObject o = new JsonObject();
+								o.addProperty("id", b.getId());
+								o.addProperty("auctionId", b.getAuctionId());
+								o.addProperty("amount", b.getAmount());
+								o.addProperty("bidTime", b.getBidTime() != null ? b.getBidTime().toString() : "");
+
+								String itemName = "";
+								try {
+									AuctionResponse ar = auctionService.findAuctionById(b.getAuctionId());
+									if (ar != null && ar.isSuccess() && ar.getAuction() != null) {
+										Item it = itemDAO.findItem(ar.getAuction().getItemId());
+										itemName = it.getName();
+									}
+								} catch (Exception ignored) {
+								}
+								o.addProperty("itemName", itemName);
+								arr.add(o);
+							}
+							JsonObject root = new JsonObject();
+							root.add("bids", arr);
+							jsonResponse = gson.toJson(root);
+						}
+						break;
+					}
+
+					case "GET_AUCTION_DETAIL" : {
+						Long auctionId = dataObj.has("auctionId") ? dataObj.get("auctionId").getAsLong() : null;
+						if (auctionId == null) {
+							jsonResponse = "{\"success\":false, \"message\":\"Thiếu auctionId\"}";
+							break;
+						}
+						AuctionResponse ar = auctionService.findAuctionById(auctionId);
+						if (ar == null || !ar.isSuccess() || ar.getAuction() == null) {
+							jsonResponse = "{\"success\":false, \"message\":\"Không tìm thấy phiên đấu giá\"}";
+							break;
+						}
+						Auction a = ar.getAuction();
+						JsonObject auctionJson = new JsonObject();
+						auctionJson.addProperty("id", a.getId());
+						auctionJson.addProperty("startingPrice", a.getStartingPrice());
+						auctionJson.addProperty("currentPrice", a.getCurrentPrice());
+						auctionJson.addProperty("startTime",
+								a.getStartTime() != null ? a.getStartTime().toString() : "");
+						auctionJson.addProperty("endTime", a.getEndTime() != null ? a.getEndTime().toString() : "");
+						auctionJson.addProperty("status", a.getStatus() != null ? a.getStatus().name() : "");
+
+						JsonObject itemJson = new JsonObject();
+						try {
+							Item it = itemDAO.findItem(a.getItemId());
+							itemJson.addProperty("id", it.getId());
+							itemJson.addProperty("name", it.getName());
+							itemJson.addProperty("description", it.getDescription());
+							itemJson.addProperty("type", it.getType());
+						} catch (Exception ex) {
+							itemJson.addProperty("name", "(không tải được)");
+						}
+
+						JsonArray bidsArr = new JsonArray();
+						for (BidTransaction b : bidService.getBidsByAuction(auctionId)) {
+							JsonObject bo = new JsonObject();
+							bo.addProperty("id", b.getId());
+							bo.addProperty("bidderId", b.getBidderId());
+							bo.addProperty("bidderName", resolveUsername(b.getBidderId()));
+							bo.addProperty("amount", b.getAmount());
+							bo.addProperty("bidTime", b.getBidTime() != null ? b.getBidTime().toString() : "");
+							bidsArr.add(bo);
+						}
+
+						JsonObject root = new JsonObject();
+						root.add("auction", auctionJson);
+						root.add("item", itemJson);
+						root.add("bids", bidsArr);
+						jsonResponse = gson.toJson(root);
+						break;
+					}
+
+					default :
+						jsonResponse = "{\"success\":false, \"message\":\"Hành động không hợp lệ!\"}";
+						break;
+				}
+
+				// Tránh xen kẽ với broadcast trên cùng PrintWriter
+				synchronized (out) {
+					out.println(jsonResponse);
+				}
+			}
+		} catch (Exception e) {
+			System.out.println("[-] Client đã ngắt kết nối.");
+		} finally {
+			activeHandlers.remove(this);
+			try {
+				if (clientSocket != null)
+					clientSocket.close();
+			} catch (IOException e) {
+			}
+		}
+	}
+
+	private String buildAuctionListJson(List<Auction> auctions) {
+		JsonArray arr = new JsonArray();
+		if (auctions != null) {
+			for (Auction a : auctions) {
+				JsonObject o = new JsonObject();
+				o.addProperty("id", a.getId());
+				o.addProperty("startingPrice", a.getStartingPrice());
+				o.addProperty("currentPrice", a.getCurrentPrice());
+				o.addProperty("startTime", a.getStartTime() != null ? a.getStartTime().toString() : "");
+				o.addProperty("endTime", a.getEndTime() != null ? a.getEndTime().toString() : "");
+				o.addProperty("status", a.getStatus() != null ? a.getStatus().name() : "");
+				String itemName = "";
+				try {
+					Item it = itemDAO.findItem(a.getItemId());
+					if (it != null)
+						itemName = it.getName();
+				} catch (Exception ignored) {
+				}
+				o.addProperty("itemName", itemName);
+				arr.add(o);
+			}
+		}
+		JsonObject root = new JsonObject();
+		root.add("auctions", arr);
+		return gson.toJson(root);
+	}
 }

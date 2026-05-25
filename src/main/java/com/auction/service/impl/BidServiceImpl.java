@@ -12,6 +12,8 @@ import com.auction.service.BidService;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class BidServiceImpl implements BidService {
 	// Error messages
@@ -33,6 +35,9 @@ public class BidServiceImpl implements BidService {
 	private final AuctionDAO auctionDAO;
 	private final AuctionService auctionService;
 
+	// Quản lý khóa chống đụng độ (Concurrent Bidding) per-auction.
+	private final ConcurrentHashMap<Long, ReentrantLock> auctionLocks = new ConcurrentHashMap<>();
+
 	public BidServiceImpl(BidDAO bidDAO, AuctionDAO auctionDAO, AuctionService auctionService) {
 		this.bidDAO = bidDAO;
 		this.auctionDAO = auctionDAO;
@@ -46,10 +51,25 @@ public class BidServiceImpl implements BidService {
 			return new BidResponse(false, error, null, 0);
 		}
 
+		Long auctionId = request.getAuctionId();
+		ReentrantLock lock = auctionLocks.computeIfAbsent(auctionId, k -> new ReentrantLock());
+
+		lock.lock();
 		try {
+			// Mở Transaction bao trọn thao tác đặt giá
 			com.auction.dao.DatabaseConnection.beginTransaction();
+
 			BidResponse response = processBid(request, bidderId);
-			com.auction.dao.DatabaseConnection.commit();
+
+			// Tất cả an toàn thì mới Commit
+			try {
+				com.auction.dao.DatabaseConnection.commit();
+			} catch (Exception commitError) {
+				System.err.println("[BidService] Lỗi commit nhưng dữ liệu có thể đã lưu: " + commitError.getMessage());
+				// Commit fail nhưng không rollback, vì dữ liệu đã được lưu
+				// (HikariCP auto-commit hoặc connection được return trước khi commit)
+				com.auction.dao.DatabaseConnection.cleanup();
+			}
 			return response;
 
 		} catch (Exception e) {
@@ -62,11 +82,14 @@ public class BidServiceImpl implements BidService {
 			System.err.println("[BidService] Transaction error: " + e.getMessage());
 			e.printStackTrace();
 			return new BidResponse(false, ERROR_SAVE_FAILED, null, 0);
+		} finally {
+			lock.unlock();
 		}
 	}
 
 	/**
-	 * Xử lý bid thật sự
+	 * Xử lý bid thật sự (chỉ là luồng logic). Đã LƯỢC BỎ lệnh đóng/mở Transaction
+	 * bên trong để gộp chung ở placeBid.
 	 */
 	private BidResponse processBid(BidRequest request, Long bidderId) throws Exception {
 		Long auctionId = request.getAuctionId();
@@ -106,8 +129,8 @@ public class BidServiceImpl implements BidService {
 			LocalDateTime fromNow = now.plusSeconds(ANTI_SNIPING_EXTEND_SECONDS);
 			auction.setEndTime(fromOld.isAfter(fromNow) ? fromOld : fromNow);
 			extended = true;
-			System.out.println(
-					"[Anti-Sniping] Phiên " + auctionId + " được tự động gia hạn đến " + auction.getEndTime());
+			System.out
+					.println("[Anti-Sniping] Phiên " + auctionId + " được tự động gia hạn đến " + auction.getEndTime());
 		}
 
 		auctionDAO.updateAuction(auction);

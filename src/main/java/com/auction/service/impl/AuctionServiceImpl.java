@@ -154,6 +154,7 @@ public class AuctionServiceImpl implements AuctionService {
 				auctionDAO.updateAuction(a);
 			}
 		} catch (Exception e) {
+			System.err.println(e.getMessage());
 		}
 	}
 

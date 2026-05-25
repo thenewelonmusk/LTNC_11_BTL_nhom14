@@ -6,6 +6,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -20,7 +21,7 @@ import javafx.scene.control.TextField;
 import java.text.NumberFormat;
 import java.util.Locale;
 
-public class BrowseAuctionsViewController {
+public class BrowseAuctionsViewController implements NetworkClient.AuctionUpdateListener {
 
 	@FXML
 	private TableView<AuctionRow> tblAuctions;
@@ -99,6 +100,9 @@ public class BrowseAuctionsViewController {
 
 		tblAuctions.setItems(data);
 		handleReload();
+
+		// Đăng ký nhận cập nhật real-time từ Server
+		NetworkClient.getInstance().addListener(this);
 	}
 
 	@FXML
@@ -186,5 +190,43 @@ public class BrowseAuctionsViewController {
 				return null;
 			}
 		}
+	}
+
+	/**
+	 * Callback được gọi khi nhận thông điệp cập nhật trạng thái từ Server. Cập nhật
+	 * lại hàng tương ứng trong bảng auction list.
+	 */
+	@Override
+	public void onAuctionUpdate(JsonObject data) {
+		// Chạy trên FX Application Thread để an toàn
+		Platform.runLater(() -> {
+			try {
+				if (!data.has("auctionId")) {
+					return;
+				}
+
+				Long auctionId = data.get("auctionId").getAsLong();
+				String newStatus = data.has("status") ? data.get("status").getAsString() : null;
+
+				// Tìm row tương ứng trong danh sách hiện tại
+				for (AuctionRow row : this.data) {
+					if (row.getId() != null && row.getId().equals(auctionId)) {
+						// Cập nhật trạng thái nếu có
+						if (newStatus != null && !newStatus.isEmpty()) {
+							row.status.set(newStatus);
+						}
+						// Cập nhật endTime nếu có
+						if (data.has("endTime") && !data.get("endTime").isJsonNull()) {
+							row.endTime.set(data.get("endTime").getAsString());
+						}
+						System.out.println("[BrowseAuctionsViewController] Cập nhật trạng thái Auction #" + auctionId
+								+ " -> " + newStatus);
+						break;
+					}
+				}
+			} catch (Exception e) {
+				System.err.println("[BrowseAuctionsViewController] Lỗi xử lý cập nhật: " + e.getMessage());
+			}
+		});
 	}
 }

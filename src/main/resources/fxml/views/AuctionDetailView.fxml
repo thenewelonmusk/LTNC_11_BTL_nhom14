@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.chart.LineChart?>
 <?import javafx.scene.chart.NumberAxis?>
 <?import javafx.scene.control.Button?>
@@ -112,17 +111,6 @@
         <Label fx:id="lblBidResult" styleClass="page-subtitle" text="" />
     </VBox>
 
-
-    <!-- Auto Bid -->
-    <VBox spacing="10.0" styleClass="card">
-        <Label styleClass="page-title" text="🤖 Auto Bid" />
-        <HBox spacing="10.0" alignment="CENTER_LEFT">
-            <CheckBox fx:id="chkEnableAutoBid" text="Bật Auto-Bid" />
-            <TextField fx:id="txtAutoBidMax" prefWidth="180.0" promptText="Max Bid" />
-            <TextField fx:id="txtAutoBidIncrement" prefWidth="180.0" promptText="Increment" />
-            <Button fx:id="btnSaveAutoBid" text="Lưu Auto-Bid" onAction="#handleSaveAutoBid" />
-        </HBox>
-    </VBox>
 
     <!-- Recent bids -->
     <VBox spacing="10.0" styleClass="card">

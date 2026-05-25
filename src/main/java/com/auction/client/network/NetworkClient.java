@@ -129,12 +129,4 @@ public class NetworkClient {
 		}
 	}
 
-	public String registerAutoBid(Object payload) {
-		return sendAndReceive("REGISTER_AUTO_BID", payload);
-	}
-
-	public String cancelAutoBid(Object payload) {
-		return sendAndReceive("CANCEL_AUTO_BID", payload);
-	}
-
 }

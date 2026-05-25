@@ -11,29 +11,51 @@ public class BidDAO {
 	public boolean saveBid(BidTransaction bid) throws Exception {
 		String sql = "INSERT INTO bids (auction_id, bidder_id, amount) VALUES (?, ?, ?)";
 
-		try {
+		// Nếu trong transaction, KHÔNG dùng try-with-resources để tránh đóng connection
+		// sớm
+		if (DatabaseConnection.isInTransaction()) {
 			Connection conn = DatabaseConnection.getConnection();
-			PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-			stmt.setLong(1, bid.getAuctionId());
-			stmt.setLong(2, bid.getBidderId());
-			stmt.setDouble(3, bid.getAmount());
+			try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+				stmt.setLong(1, bid.getAuctionId());
+				stmt.setLong(2, bid.getBidderId());
+				stmt.setDouble(3, bid.getAmount());
 
-			int affectedRows = stmt.executeUpdate();
-			if (affectedRows > 0) {
-				try (ResultSet rs = stmt.getGeneratedKeys()) {
-					if (rs.next()) {
-						bid.setId(rs.getLong(1));
+				int affectedRows = stmt.executeUpdate();
+				if (affectedRows > 0) {
+					try (ResultSet rs = stmt.getGeneratedKeys()) {
+						if (rs.next()) {
+							bid.setId(rs.getLong(1));
+						}
 					}
+					return true;
 				}
-				stmt.close();
-				return true;
+				throw new Exception("SAVE_FAILED");
+			} catch (SQLException e) {
+				e.printStackTrace();
+				throw new Exception("DATABASE_ERROR");
 			}
-			stmt.close();
-			throw new Exception("SAVE_FAILED");
+		} else {
+			// Bình thường (không transaction), dùng try-with-resources
+			try (Connection conn = DatabaseConnection.getConnection();
+					PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+				stmt.setLong(1, bid.getAuctionId());
+				stmt.setLong(2, bid.getBidderId());
+				stmt.setDouble(3, bid.getAmount());
 
-		} catch (SQLException e) {
-			e.printStackTrace();
-			throw new Exception("DATABASE_ERROR");
+				int affectedRows = stmt.executeUpdate();
+				if (affectedRows > 0) {
+					try (ResultSet rs = stmt.getGeneratedKeys()) {
+						if (rs.next()) {
+							bid.setId(rs.getLong(1));
+						}
+					}
+					return true;
+				}
+				throw new Exception("SAVE_FAILED");
+			} catch (SQLException e) {
+				e.printStackTrace();
+				throw new Exception("DATABASE_ERROR");
+			}
 		}
 	}
 
@@ -43,18 +65,30 @@ public class BidDAO {
 		// Việc sort theo "bid cao nhất ở đầu" để hiển thị bảng được làm ở phía client.
 		String sql = "SELECT * FROM bids WHERE auction_id = ? ORDER BY id ASC";
 
-		try {
+		if (DatabaseConnection.isInTransaction()) {
 			Connection conn = DatabaseConnection.getConnection();
-			PreparedStatement stmt = conn.prepareStatement(sql);
-			stmt.setLong(1, auctionId);
-			ResultSet rs = stmt.executeQuery();
-			while (rs.next()) {
-				list.add(mapRow(rs));
+			try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+				stmt.setLong(1, auctionId);
+				try (ResultSet rs = stmt.executeQuery()) {
+					while (rs.next()) {
+						list.add(mapRow(rs));
+					}
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
-			rs.close();
-			stmt.close();
-		} catch (Exception e) {
-			e.printStackTrace();
+		} else {
+			try (Connection conn = DatabaseConnection.getConnection();
+					PreparedStatement stmt = conn.prepareStatement(sql)) {
+				stmt.setLong(1, auctionId);
+				try (ResultSet rs = stmt.executeQuery()) {
+					while (rs.next()) {
+						list.add(mapRow(rs));
+					}
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 		return list;
 	}
@@ -63,18 +97,30 @@ public class BidDAO {
 		List<BidTransaction> list = new ArrayList<>();
 		String sql = "SELECT * FROM bids WHERE bidder_id = ? ORDER BY id DESC";
 
-		try {
+		if (DatabaseConnection.isInTransaction()) {
 			Connection conn = DatabaseConnection.getConnection();
-			PreparedStatement stmt = conn.prepareStatement(sql);
-			stmt.setLong(1, bidderId);
-			ResultSet rs = stmt.executeQuery();
-			while (rs.next()) {
-				list.add(mapRow(rs));
+			try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+				stmt.setLong(1, bidderId);
+				try (ResultSet rs = stmt.executeQuery()) {
+					while (rs.next()) {
+						list.add(mapRow(rs));
+					}
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
-			rs.close();
-			stmt.close();
-		} catch (Exception e) {
-			e.printStackTrace();
+		} else {
+			try (Connection conn = DatabaseConnection.getConnection();
+					PreparedStatement stmt = conn.prepareStatement(sql)) {
+				stmt.setLong(1, bidderId);
+				try (ResultSet rs = stmt.executeQuery()) {
+					while (rs.next()) {
+						list.add(mapRow(rs));
+					}
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 		return list;
 	}
@@ -82,21 +128,30 @@ public class BidDAO {
 	public BidTransaction findHighestBidByAuction(Long auctionId) {
 		String sql = "SELECT * FROM bids WHERE auction_id = ? ORDER BY amount DESC LIMIT 1";
 
-		try {
+		if (DatabaseConnection.isInTransaction()) {
 			Connection conn = DatabaseConnection.getConnection();
-			PreparedStatement stmt = conn.prepareStatement(sql);
-			stmt.setLong(1, auctionId);
-			ResultSet rs = stmt.executeQuery();
-			if (rs.next()) {
-				BidTransaction result = mapRow(rs);
-				rs.close();
-				stmt.close();
-				return result;
+			try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+				stmt.setLong(1, auctionId);
+				try (ResultSet rs = stmt.executeQuery()) {
+					if (rs.next()) {
+						return mapRow(rs);
+					}
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
-			rs.close();
-			stmt.close();
-		} catch (Exception e) {
-			e.printStackTrace();
+		} else {
+			try (Connection conn = DatabaseConnection.getConnection();
+					PreparedStatement stmt = conn.prepareStatement(sql)) {
+				stmt.setLong(1, auctionId);
+				try (ResultSet rs = stmt.executeQuery()) {
+					if (rs.next()) {
+						return mapRow(rs);
+					}
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 		return null;
 	}
