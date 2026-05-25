@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.String?>
+<?import javafx.collections.FXCollections?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<VBox alignment="CENTER" prefHeight="450.0" prefWidth="400.0" spacing="15.0" style="-fx-padding: 30; -fx-background-color: #f4f4f4;" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.client.controller.ItemFormController">
+
+    <Label text="THÔNG TIN SẢN PHẨM" textFill="#2c3e50">
+        <font><Font name="System Bold" size="20.0" /></font>
+    </Label>
+
+    <TextField fx:id="txtName" prefHeight="35.0" promptText="Tên sản phẩm..." style="-fx-background-radius: 5;" />
+
+    <TextArea fx:id="txtDesc" prefHeight="100.0" promptText="Mô tả chi tiết..." style="-fx-background-radius: 5;" />
+
+    <ComboBox fx:id="cbCategory" prefHeight="35.0" prefWidth="340.0" promptText="Chọn danh mục" style="-fx-background-radius: 5;">
+        <items>
+            <FXCollections fx:factory="observableArrayList">
+                <String fx:value="ELECTRONICS" />
+                <String fx:value="ART" />
+                <String fx:value="VEHICLE" />
+            </FXCollections>
+        </items>
+    </ComboBox>
+
+    <TextField fx:id="txtPrice" prefHeight="35.0" promptText="Giá khởi điểm (VNĐ)..." style="-fx-background-radius: 5;" />
+
+    <Button onAction="#handleSave" prefHeight="40.0" prefWidth="340.0" style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 5;" text="LƯU SẢN PHẨM" />
+
+</VBox>
