@@ -41,12 +41,14 @@ public class DatabaseConnection {
 
 			config.setMaximumPoolSize(MAXIMUM_POOL_SIZE); // Tối đa 10 connections trong pool
 			config.setMinimumIdle(MINIMUM_IDLE); // Tối thiểu 5 connections rảnh
-			config.setConnectionTimeout(TimeUnit.SECONDS.toMillis(CONNECTION_TIMEOUT)); // Timeout 5 giây khi chờ connection
+			config.setConnectionTimeout(TimeUnit.SECONDS.toMillis(CONNECTION_TIMEOUT)); // Timeout 5 giây khi chờ
+																						// connection
 			config.setIdleTimeout(TimeUnit.MINUTES.toMillis(IDLE_TIMEOUT)); // Đóng connection nếu idle 10 phút
 			config.setMaxLifetime(TimeUnit.MINUTES.toMillis(MAX_LIFETIME)); // Tuổi tối đa của connection: 30 phút
 			config.setAutoCommit(true); // Auto-commit mặc định (transaction sẽ tắt)
 
-			config.setLeakDetectionThreshold(TimeUnit.SECONDS.toMillis(LEAK_DETECTION_THRESHOLD)); // 120 giây (tăng từ 60)
+			config.setLeakDetectionThreshold(TimeUnit.SECONDS.toMillis(LEAK_DETECTION_THRESHOLD)); // 120 giây (tăng từ
+																									// 60)
 
 			// FIX: Thêm connection test queries để kiểm tra health
 			config.setConnectionTestQuery("SELECT 1");

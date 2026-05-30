@@ -1,24 +1,41 @@
-name: Maven CI
+name: Java CI with Maven
 
 on:
   push:
+    branches: [ "main" ]
   pull_request:
+    branches: [ "main" ]
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
+    # 1. Bật dịch vụ MySQL Server chạy ngầm trên máy ảo GitHub
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: your_password          # Điền mật khẩu DB của nhóm vào đây
+          MYSQL_DATABASE: auction_db                 # Điền tên Database của nhóm vào đây
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
     steps:
+      - uses: actions/checkout@v4
 
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Java 17
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
-          java-version: 17
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
 
-      - name: Build project
+      # 2. (Tùy chọn) Khởi tạo cấu trúc bảng nếu các bài test của nhóm yêu cầu dữ liệu mẫu
+      # Nhóm có thể bỏ ghi chú lines dưới nếu có file schema.sql trong source code
+      # - name: Initialize Database Schema
+      #   run: mysql -h 127.0.0.1 -u root -pyour_password auction_db < src/main/resources/schema.sql
+
+      # 3. Chạy lệnh kiểm thử khi môi trường DB đã sẵn sàng
+      - name: Build and Test with Maven
         run: mvn clean test
