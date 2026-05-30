@@ -15,7 +15,7 @@ jobs:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: your_password          # Điền mật khẩu DB của nhóm vào đây
+          MYSQL_ROOT_PASSWORD: password          # Điền mật khẩu DB của nhóm vào đây
           MYSQL_DATABASE: auction_db                 # Điền tên Database của nhóm vào đây
         ports:
           - 3306:3306
