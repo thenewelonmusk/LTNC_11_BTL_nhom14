@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.String?>
+<?import javafx.collections.FXCollections?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox spacing="18.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.auction.client.controller.ItemFormViewController">
+
+    <HBox alignment="CENTER_LEFT" spacing="14.0">
+        <VBox spacing="4.0" HBox.hgrow="ALWAYS">
+            <Label fx:id="lblTitle" styleClass="page-title" text="➕ Tạo sản phẩm mới" />
+            <Label styleClass="page-subtitle" text="Điền đầy đủ thông tin sản phẩm trước khi mở phiên đấu giá" />
+        </VBox>
+        <Button styleClass="btn-ghost" text="← Quay lại" onAction="#handleBack" />
+    </HBox>
+
+    <VBox spacing="14.0" styleClass="card" maxWidth="720">
+
+        <VBox spacing="6.0">
+            <Label styleClass="form-label" text="Tên sản phẩm" />
+            <TextField fx:id="txtName" prefHeight="38.0" promptText="VD: iPhone 15 Pro Max 256GB..." />
+        </VBox>
+
+        <VBox spacing="6.0">
+            <Label styleClass="form-label" text="Mô tả chi tiết" />
+            <TextArea fx:id="txtDesc" prefHeight="120.0" promptText="Mô tả tình trạng, nguồn gốc, đặc điểm nổi bật..." wrapText="true" />
+        </VBox>
+
+        <HBox spacing="14.0">
+            <VBox spacing="6.0" HBox.hgrow="ALWAYS">
+                <Label styleClass="form-label" text="Danh mục" />
+                <ComboBox fx:id="cbCategory" prefHeight="38.0" maxWidth="Infinity" promptText="Chọn danh mục">
+                    <items>
+                        <FXCollections fx:factory="observableArrayList">
+                            <String fx:value="ELECTRONICS" />
+                            <String fx:value="ART" />
+                            <String fx:value="VEHICLE" />
+                        </FXCollections>
+                    </items>
+                </ComboBox>
+            </VBox>
+            <VBox spacing="6.0" HBox.hgrow="ALWAYS">
+                <Label styleClass="form-label" text="Giá khởi điểm (VNĐ)" />
+                <TextField fx:id="txtPrice" prefHeight="38.0" promptText="VD: 5000000" />
+            </VBox>
+        </HBox>
+
+        <!-- Extra fields will be shown/hidden depending on the category -->
+        <VBox fx:id="boxElectronics" spacing="6.0" visible="false" managed="false">
+            <Label styleClass="form-label" text="Thông tin Điện tử" />
+            <HBox spacing="10.0">
+                <TextField fx:id="txtDeviceBrand"  prefHeight="38.0" promptText="Hãng (Apple, Samsung...)" HBox.hgrow="ALWAYS" />
+                <TextField fx:id="txtWarrantyMonths" prefHeight="38.0" promptText="Bảo hành (tháng)" HBox.hgrow="ALWAYS" />
+            </HBox>
+        </VBox>
+
+        <VBox fx:id="boxArt" spacing="6.0" visible="false" managed="false">
+            <Label styleClass="form-label" text="Thông tin Nghệ thuật" />
+            <HBox spacing="10.0">
+                <TextField fx:id="txtArtist" prefHeight="38.0" promptText="Tác giả" HBox.hgrow="ALWAYS" />
+                <TextField fx:id="txtYear"   prefHeight="38.0" promptText="Năm sáng tác" HBox.hgrow="ALWAYS" />
+            </HBox>
+        </VBox>
+
+        <VBox fx:id="boxVehicle" spacing="6.0" visible="false" managed="false">
+            <Label styleClass="form-label" text="Thông tin Xe cộ" />
+            <HBox spacing="10.0">
+                <TextField fx:id="txtVehicleBrand" prefHeight="38.0" promptText="Hãng xe" HBox.hgrow="ALWAYS" />
+                <TextField fx:id="txtMileage"      prefHeight="38.0" promptText="Số km đã đi" HBox.hgrow="ALWAYS" />
+            </HBox>
+        </VBox>
+
+        <HBox spacing="10.0" alignment="CENTER_RIGHT">
+            <Region HBox.hgrow="ALWAYS" />
+            <Button styleClass="btn-ghost"   text="Hủy"   onAction="#handleBack" />
+            <Button styleClass="btn-success" text="💾 Lưu sản phẩm" onAction="#handleSave" />
+        </HBox>
+    </VBox>
+</VBox>
