@@ -32,18 +32,6 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Locale;
 
-/**
- * Controller màn hình "Chi tiết phiên đấu giá".
- *
- * Tính năng: - Hiển thị thông tin sản phẩm + tình trạng phiên - Đặt giá thầu
- * (PLACE_BID) + các nút quick-add (+10k / +50k / +100k) - 📈 Biểu đồ đường giá
- * đấu cao nhất theo thời gian thực (Phần 3.2.5 đề bài) • Trục X: số giây đã
- * trôi qua kể từ lúc mở view • Trục Y: giá đấu hiện tại • Mỗi bid hợp lệ (qua
- * broadcast AUCTION_UPDATE) -> tự động thêm điểm mới - ⏰ Đồng hồ đếm ngược thời
- * gian còn lại của phiên - Highlight bid do CHÍNH user hiện tại đặt (bidder ==
- * session.username) - "🟢 LIVE" indicator nhấp nháy khi đang nhận realtime
- * update
- */
 public class AuctionDetailViewController implements NetworkClient.AuctionUpdateListener {
 
 	// ---- Header / search ----
@@ -70,7 +58,6 @@ public class AuctionDetailViewController implements NetworkClient.AuctionUpdateL
 	@FXML
 	private Label lblCountdown;
 
-	// ---- Bid input ----
 	@FXML
 	private TextField txtBidAmount;
 	@FXML
@@ -78,7 +65,6 @@ public class AuctionDetailViewController implements NetworkClient.AuctionUpdateL
 	@FXML
 	private Label lblBidResult;
 
-	// ---- Chart ----
 	@FXML
 	private LineChart<Number, Number> priceChart;
 	@FXML
@@ -90,7 +76,6 @@ public class AuctionDetailViewController implements NetworkClient.AuctionUpdateL
 	@FXML
 	private Label lblPeakPrice;
 
-	// ---- Bid table ----
 	@FXML
 	private TableView<BidRow> tblBids;
 	@FXML
@@ -108,17 +93,12 @@ public class AuctionDetailViewController implements NetworkClient.AuctionUpdateL
 	private final ObservableList<BidRow> bidsList = FXCollections.observableArrayList();
 	private MainWindowController mainWindowController;
 
-	// Chart state
 	private XYChart.Series<Number, Number> priceSeries;
 	private double peakPrice = 0.0;
 	private int bidCount = 0;
 
-	/**
-	 * Mốc thời gian để normalize trục X realtime chart.
-	 */
 	private long chartBaseTime = System.currentTimeMillis();
 
-	// Countdown
 	private Timeline countdownTimeline;
 	private Timeline liveBlinkTimeline;
 	private LocalDateTime endTime;
@@ -130,7 +110,6 @@ public class AuctionDetailViewController implements NetworkClient.AuctionUpdateL
 
 	@FXML
 	public void initialize() {
-		// Bid table columns
 		if (colBidId != null) {
 			colBidId.setCellValueFactory(cellData -> cellData.getValue().idProperty());
 		}
@@ -139,7 +118,6 @@ public class AuctionDetailViewController implements NetworkClient.AuctionUpdateL
 		}
 		if (colAmount != null) {
 			colAmount.setCellValueFactory(cellData -> cellData.getValue().amountProperty().asObject());
-			// Format VNĐ cho cột "Số tiền"
 			colAmount.setCellFactory(col -> new TableCell<>() {
 				@Override
 				protected void updateItem(Double value, boolean empty) {
@@ -159,7 +137,6 @@ public class AuctionDetailViewController implements NetworkClient.AuctionUpdateL
 		if (tblBids != null) {
 			tblBids.setItems(bidsList);
 
-			// Highlight row của chính user
 			tblBids.setRowFactory(tv -> new TableRow<>() {
 				@Override
 				protected void updateItem(BidRow item, boolean empty) {
@@ -172,7 +149,6 @@ public class AuctionDetailViewController implements NetworkClient.AuctionUpdateL
 					if (me != null && me.equalsIgnoreCase(item.bidderProperty().get())) {
 						getStyleClass().add("my-bid-row");
 					}
-					// bid cao nhất (index 0) cũng được tô màu nổi bật
 					if (getIndex() == 0) {
 						getStyleClass().add("top-bid-row");
 					}
@@ -188,16 +164,10 @@ public class AuctionDetailViewController implements NetworkClient.AuctionUpdateL
 			priceChart.getData().add(priceSeries);
 		}
 
-		// Đèn LIVE nhấp nháy
 		startLiveBlink();
 
-		// Đăng ký nhận broadcast realtime
 		NetworkClient.getInstance().addListener(this);
 	}
-
-	// =====================================================================
-	// LOAD AUCTION
-	// =====================================================================
 
 	@FXML
 	private void handleLoad() {
@@ -220,7 +190,6 @@ public class AuctionDetailViewController implements NetworkClient.AuctionUpdateL
 			txtAuctionId.setText(String.valueOf(auctionId));
 		}
 
-		// Reset chart state cho phiên mới
 		resetChart();
 
 		new Thread(() -> {
@@ -276,10 +245,8 @@ public class AuctionDetailViewController implements NetworkClient.AuctionUpdateL
 			if (lblBidResult != null)
 				lblBidResult.setText("");
 
-			// Setup countdown timer
 			setupCountdown(endStr);
 
-			// Populate bid table
 			bidsList.clear();
 			bidCount = 0;
 			peakPrice = startPrice;
@@ -297,10 +264,8 @@ public class AuctionDetailViewController implements NetworkClient.AuctionUpdateL
 				}
 			}
 
-			// Sắp xếp bid mới nhất ở đầu (theo amount giảm dần)
 			bidsList.sort((a, b) -> Double.compare(b.amountProperty().get(), a.amountProperty().get()));
 
-			// Build initial chart points (historical)
 			buildInitialChart(startPrice, currentPrice, bids);
 
 			updateBidStats();
@@ -312,23 +277,15 @@ public class AuctionDetailViewController implements NetworkClient.AuctionUpdateL
 		}
 	}
 
-	/**
-	 * Vẽ chart từ dữ liệu lịch sử khi mới load phòng.
-	 */
 	private void buildInitialChart(double startingPrice, double currentPrice, JsonArray bids) {
 		if (priceSeries == null)
 			return;
 		priceSeries.getData().clear();
-		// Dùng timestamp THẬT của bid đầu tiên thay vì thời điểm mở view
 
-		// Điểm đầu tiên: giá khởi điểm tại t=0
 		priceSeries.getData().add(new XYChart.Data<>(0, startingPrice));
 
-		// Mỗi bid lịch sử -> 1 điểm. Vì ta không có timestamp chính xác để
-		// vẽ theo thời gian thật, ta phân bố đều theo thứ tự (giả lập "tick").
 		int n = bids.size();
 		if (n > 0) {
-			// Duyệt theo thứ tự thời gian: tăng dần theo amount nếu time không có
 			java.util.List<Double> amounts = new java.util.ArrayList<>();
 			for (JsonElement el : bids) {
 				JsonObject b = el.getAsJsonObject();
@@ -366,31 +323,20 @@ public class AuctionDetailViewController implements NetworkClient.AuctionUpdateL
 		}
 	}
 
-	/**
-	 * Thêm điểm realtime vào line chart.
-	 *
-	 * SỬA: dùng cùng đơn vị với buildInitialChart (chỉ số bid - 1, 2, 3...) trùng
-	 * với label trục X trong FXML là "Lượt bid". Trước đây realtime dùng "số giây
-	 * kể từ lúc mở view" còn historical dùng "chỉ số bid", nên đường biểu đồ bị
-	 * gãy/lùi về 0 mỗi lần có bid mới.
-	 */
 	private void appendChartPoint(double amount) {
 
 		if (priceSeries == null) {
 			return;
 		}
 
-		// bidCount chuẩn bị được tăng ở dưới; X của điểm mới = bidCount + 1
-		int xIndex = priceSeries.getData().size(); // tiếp nối ngay sau điểm cuối hiện có
+		int xIndex = priceSeries.getData().size();
 
 		priceSeries.getData().add(new XYChart.Data<>(xIndex, amount));
 
-		// chống memory leak chart
 		if (priceSeries.getData().size() > 200) {
 			priceSeries.getData().remove(0);
 		}
 
-		// update thống kê
 		bidCount++;
 
 		if (amount > peakPrice) {
@@ -405,10 +351,6 @@ public class AuctionDetailViewController implements NetworkClient.AuctionUpdateL
 			lblPeakPrice.setText(formatMoney(peakPrice));
 		}
 	}
-
-	// =====================================================================
-	// PLACE BID
-	// =====================================================================
 
 	@FXML
 	private void handlePlaceBid() {
@@ -502,12 +444,11 @@ public class AuctionDetailViewController implements NetworkClient.AuctionUpdateL
 	}
 
 	private double currentPriceValue() {
-		// Nếu user đang gõ thì cộng dồn vào số đó, không thì lấy giá hiện tại
 		if (txtBidAmount != null && !txtBidAmount.getText().isBlank()) {
 			try {
 				return Double.parseDouble(txtBidAmount.getText().trim());
 			} catch (NumberFormatException ignored) {
-				/* fall through */ }
+			}
 		}
 		if (lblCurrent != null) {
 			String s = lblCurrent.getText().replaceAll("[^0-9]", "");
@@ -515,15 +456,11 @@ public class AuctionDetailViewController implements NetworkClient.AuctionUpdateL
 				try {
 					return Double.parseDouble(s);
 				} catch (NumberFormatException ignored) {
-					/* fall through */ }
+				}
 			}
 		}
 		return 0.0;
 	}
-
-	// =====================================================================
-	// NAVIGATION
-	// =====================================================================
 
 	@FXML
 	private void handleBack() {
@@ -532,10 +469,6 @@ public class AuctionDetailViewController implements NetworkClient.AuctionUpdateL
 			mainWindowController.showBrowseAuctions();
 		}
 	}
-
-	// =====================================================================
-	// REALTIME (Observer of AUCTION_UPDATE broadcast)
-	// =====================================================================
 
 	@Override
 	public void onAuctionUpdate(JsonObject data) {
@@ -556,13 +489,10 @@ public class AuctionDetailViewController implements NetworkClient.AuctionUpdateL
 		String bidId = getStr(data, "bidId", "");
 
 		Platform.runLater(() -> {
-			// Cập nhật giá nếu có bid mới
 			if (newPrice > 0 && bidId != null && !bidId.isEmpty()) {
 				if (lblCurrent != null) {
 					lblCurrent.setText(formatMoney(newPrice));
 				}
-				// SỬA: chỉ rebuild countdown khi endTime thực sự thay đổi
-				// -> tránh giật label mỗi khi có bid liên tiếp.
 				if (lblEnd != null && newEndTime != null && !newEndTime.isBlank()) {
 					String old = lblEnd.getText();
 					if (!newEndTime.equals(old)) {
@@ -571,13 +501,10 @@ public class AuctionDetailViewController implements NetworkClient.AuctionUpdateL
 					}
 				}
 
-				// 1) Thêm dòng vào bảng (đầu danh sách)
 				bidsList.add(0, new BidRow(bidId, bidderName, newPrice, bidTime));
 
-				// 2) 📈 Thêm điểm mới vào biểu đồ realtime
 				appendChartPoint(newPrice);
 
-				// 3) Cập nhật label thống kê + bidder cao nhất
 				if (newPrice > peakPrice)
 					peakPrice = newPrice;
 				updateBidStats();
@@ -587,16 +514,12 @@ public class AuctionDetailViewController implements NetworkClient.AuctionUpdateL
 					lblBidResult.setText("🔔 " + msg + " (" + bidderName + " - " + formatMoney(newPrice) + ")");
 				}
 
-				// Flash đèn LIVE
 				flashLive();
-			}
-			// Cập nhật trạng thái nếu có (từ status monitor)
-			else if (newStatus != null && !newStatus.isEmpty()) {
+			} else if (newStatus != null && !newStatus.isEmpty()) {
 				applyStatusStyle(newStatus);
 				System.out.println(
 						"[AuctionDetailViewController] Trạng thái phiên #" + currentAuctionId + " -> " + newStatus);
 
-				// Hiển thị thông báo trạng thái
 				if (lblBidResult != null) {
 					if ("FINISHED".equals(newStatus) || "FINISHED".equals(newStatus.toUpperCase())) {
 						lblBidResult.setText("⏹️ Phiên đấu giá đã kết thúc!");
@@ -613,15 +536,10 @@ public class AuctionDetailViewController implements NetworkClient.AuctionUpdateL
 					}
 				}
 
-				// Flash đèn LIVE
 				flashLive();
 			}
 		});
 	}
-
-	/**
-	 * Thêm 1 điểm dữ liệu mới vào line chart (giờ thực tế tính bằng giây).
-	 */
 
 	private void updateBidStats() {
 		if (lblBidCount != null) {
@@ -644,22 +562,16 @@ public class AuctionDetailViewController implements NetworkClient.AuctionUpdateL
 				"👑 Cao nhất: " + top.bidderProperty().get() + " (" + formatMoney(top.amountProperty().get()) + ")");
 	}
 
-	// =====================================================================
-	// COUNTDOWN
-	// =====================================================================
-
 	private void setupCountdown(String endTimeStr) {
 		if (lblCountdown == null)
 			return;
 
-		// Cố parse string ISO
 		endTime = null;
 		if (endTimeStr != null && !endTimeStr.isBlank() && !"-".equals(endTimeStr)) {
 			try {
 				endTime = LocalDateTime.parse(endTimeStr, ISO_FORMATTER);
 			} catch (Exception ignored) {
 				try {
-					// Backup: chấp nhận định dạng có thể là "yyyy-MM-dd HH:mm:ss"
 					DateTimeFormatter alt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 					endTime = LocalDateTime.parse(endTimeStr, alt);
 				} catch (Exception ignored2) {
@@ -668,7 +580,6 @@ public class AuctionDetailViewController implements NetworkClient.AuctionUpdateL
 			}
 		}
 
-		// Stop timeline cũ
 		if (countdownTimeline != null) {
 			countdownTimeline.stop();
 		}
@@ -702,7 +613,6 @@ public class AuctionDetailViewController implements NetworkClient.AuctionUpdateL
 		long s = seconds % 60;
 		lblCountdown.setText(String.format("%02d:%02d:%02d", h, m, s));
 
-		// Dưới 60 giây -> chuyển sang style cảnh báo
 		lblCountdown.getStyleClass().removeAll("countdown-urgent", "countdown-ended");
 		if (!lblCountdown.getStyleClass().contains("countdown-label")) {
 			lblCountdown.getStyleClass().add("countdown-label");
@@ -711,10 +621,6 @@ public class AuctionDetailViewController implements NetworkClient.AuctionUpdateL
 			lblCountdown.getStyleClass().add("countdown-urgent");
 		}
 	}
-
-	// =====================================================================
-	// LIVE indicator blink
-	// =====================================================================
 
 	private void startLiveBlink() {
 		if (lblLiveIndicator == null)
@@ -732,10 +638,6 @@ public class AuctionDetailViewController implements NetworkClient.AuctionUpdateL
 		lblLiveIndicator.setOpacity(1.0);
 	}
 
-	// =====================================================================
-	// STATUS pill style
-	// =====================================================================
-
 	private void applyStatusStyle(String status) {
 		if (lblStatus == null)
 			return;
@@ -751,10 +653,6 @@ public class AuctionDetailViewController implements NetworkClient.AuctionUpdateL
 		}
 	}
 
-	// =====================================================================
-	// CLEAN UP
-	// =====================================================================
-
 	public void destroy() {
 		NetworkClient.getInstance().removeListener(this);
 		if (countdownTimeline != null) {
@@ -766,10 +664,6 @@ public class AuctionDetailViewController implements NetworkClient.AuctionUpdateL
 			liveBlinkTimeline = null;
 		}
 	}
-
-	// =====================================================================
-	// HELPERS
-	// =====================================================================
 
 	private void showMessage(String message) {
 		if (lblBidResult != null) {

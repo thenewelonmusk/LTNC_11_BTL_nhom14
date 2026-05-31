@@ -29,20 +29,16 @@ public class LoginUIController {
 		String username = txtUsername.getText();
 		String password = txtPassword.getText();
 
-		// 1. Tạo DTO
 		LoginRequest req = new LoginRequest(username, password);
 
-		// 2. Gửi qua Socket thông qua NetworkClient
 		NetworkClient client = NetworkClient.getInstance();
 		String responseJson = client.sendAndReceive("LOGIN", req);
 
-		// 3. Xử lý kết quả trả về
 		if (responseJson != null) {
 			LoginResponse response = gson.fromJson(responseJson, LoginResponse.class);
 
 			if (response.isSuccess()) {
 				showAlert(Alert.AlertType.INFORMATION, "Thành công", response.getMessage());
-				// TODO: Chuyển sang màn hình danh sách sản phẩm (Dashboard)
 			} else {
 				showAlert(Alert.AlertType.ERROR, "Lỗi đăng nhập", response.getMessage());
 			}
@@ -55,9 +51,7 @@ public class LoginUIController {
 	public void goToRegister() {
 		try {
 			Parent root = FXMLLoader.load(getClass().getResource("/fxml/Register.fxml"));
-			// Lấy Stage hiện tại từ một node bất kỳ (txtUsername)
 			Stage stage = (Stage) txtUsername.getScene().getWindow();
-			// Form đăng ký dài hơn nên set chiều cao là 450
 			stage.setScene(new Scene(root, 400, 450));
 			stage.setTitle("Đăng ký - Hệ Thống Đấu Giá");
 		} catch (IOException e) {

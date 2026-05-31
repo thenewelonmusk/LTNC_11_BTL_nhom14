@@ -28,24 +28,6 @@ public class ItemServiceImplTest {
 		itemService = new ItemServiceImpl(itemDAO);
 	}
 
-	// ================= CREATE ITEM TESTS =================
-	//
-	// @Test
-	// void testCreateItem_Success() throws Exception {
-	// ItemRequest req = new ItemRequest();
-	// req.setName("Sản phẩm xịn");
-	// req.setType("ELECTRONICS");
-	// req.setStartingPrice(100.0);
-	//
-	// when(itemDAO.createItem(any())).thenReturn(true);
-	//
-	// ItemResponse res = itemService.createItem(req, 1L);
-	//
-	// assertTrue(res.isSuccess());
-	// assertEquals("Tạo sản phẩm thành công.", res.getMessage());
-	// assertEquals(1L, req.getSellerId()); // Kiểm tra sellerId đã được gán
-	// }
-
 	@Test
 	void testCreateItem_FailValidation() {
 		ItemRequest req = new ItemRequest();
@@ -61,7 +43,7 @@ public class ItemServiceImplTest {
 	void testCreateItem_DatabaseError() throws Exception {
 		ItemRequest req = new ItemRequest();
 		req.setName("Bàn phím");
-		req.setType("ELECTRONICS"); // Cần type đúng để qua Factory
+		req.setType("ELECTRONICS");
 
 		when(itemDAO.createItem(any())).thenThrow(new Exception("DATABASE_ERROR"));
 
@@ -71,8 +53,6 @@ public class ItemServiceImplTest {
 		assertEquals("DATABASE_ERROR", res.getMessage());
 	}
 
-	// ================= UPDATE ITEM TESTS =================
-
 	@Test
 	void testUpdateItem_Success() throws Exception {
 		ItemRequest req = new ItemRequest();
@@ -80,7 +60,7 @@ public class ItemServiceImplTest {
 		req.setType("ART");
 
 		Item mockItem = mock(Item.class);
-		when(mockItem.getSellerId()).thenReturn(1L); // Cùng chủ
+		when(mockItem.getSellerId()).thenReturn(1L);
 		when(itemDAO.findItem(100L)).thenReturn(mockItem);
 		when(itemDAO.updateItem(any())).thenReturn(true);
 
@@ -96,8 +76,8 @@ public class ItemServiceImplTest {
 		req.setName("Sửa trộm");
 
 		Item mockItem = mock(Item.class);
-		when(mockItem.getSellerId()).thenReturn(2L); // Chủ là người ID 2
-		when(itemDAO.findItem(100L)).thenReturn(mockItem); // Mình là ID 1
+		when(mockItem.getSellerId()).thenReturn(2L);
+		when(itemDAO.findItem(100L)).thenReturn(mockItem);
 
 		ItemResponse res = itemService.updateItem(100L, req, 1L);
 
@@ -117,8 +97,6 @@ public class ItemServiceImplTest {
 		assertFalse(res.isSuccess());
 		assertEquals("Không tìm thấy sản phẩm.", res.getMessage());
 	}
-
-	// ================= DELETE ITEM TESTS =================
 
 	@Test
 	void testDeleteItem_Success() throws Exception {
@@ -146,12 +124,10 @@ public class ItemServiceImplTest {
 		verify(itemDAO, never()).deleteItem(anyLong()); // Đảm bảo DAO xóa không được gọi
 	}
 
-	// ================= FIND ITEMS TESTS =================
-
 	@Test
 	void testFindByType_Valid() {
 		itemService.findByType("electronics");
-		verify(itemDAO).findByType("ELECTRONICS"); // Phải được in hoa
+		verify(itemDAO).findByType("ELECTRONICS");
 	}
 
 	@Test

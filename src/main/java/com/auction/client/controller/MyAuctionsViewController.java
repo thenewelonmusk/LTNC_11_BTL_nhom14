@@ -69,20 +69,15 @@ public class MyAuctionsViewController {
 				btn.setOnAction(e -> {
 					AuctionRow r = getTableView().getItems().get(getIndex());
 					try {
-						// 1. Ép kiểu chuỗi ID từ dòng được chọn sang kiểu long/Long
 						long auctionId = Long.parseLong(r.id.get());
 
-						// Lưu vào Session (giữ nguyên logic cũ của bạn nếu cần dùng ở nơi khác)
 						Session.get().setSelectedAuctionId(auctionId);
 
-						// 2. Tìm kiếm thực thể điều hướng chính MainWindowController
 						MainWindowController main = MainWindowController.get();
 						if (main != null) {
-							// TRUYỀN THAM SỐ CHÍNH XÁC VÀO ĐÂY ĐỂ HẾT BÁO ĐỎ:
 							main.showAuctionDetail(auctionId);
 						}
 					} catch (Exception ignored) {
-						// Phòng trường hợp dữ liệu r.id.get() bị lỗi định dạng không parse được
 						System.err.println("Không thể chuyển hướng do ID phiên đấu giá không hợp lệ.");
 					}
 				});

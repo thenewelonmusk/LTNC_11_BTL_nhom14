@@ -45,22 +45,17 @@ public class HomeViewController {
 		if (Session.get().isBidder()) {
 			quickActions.getChildren().add(action("🔍 Xem phiên đấu giá", "btn-primary", main::showBrowseAuctions));
 			quickActions.getChildren().add(action("🎯 Vào chi tiết phiên", "btn-warning", () -> {
-				// 1. Tạo một hộp thoại yêu cầu nhập ID phòng muốn vào
 				javafx.scene.control.TextInputDialog dialog = new javafx.scene.control.TextInputDialog("");
 				dialog.setTitle("Vào phòng đấu giá");
 				dialog.setHeaderText("Nhập ID phiên đấu giá bạn muốn truy cập:");
 				dialog.setContentText("Mã phiên (ID):");
 
-				// 2. Chờ người dùng nhập số và nhấn OK
 				dialog.showAndWait().ifPresent(idStr -> {
 					try {
-						// Chuyển chuỗi nhập vào thành kiểu Long
 						Long auctionId = Long.parseLong(idStr.trim());
 
-						// Gọi hàm chuyển giao diện chính xác với ID người dùng vừa nhập
 						main.showAuctionDetail(auctionId);
 					} catch (NumberFormatException e) {
-						// Xử lý an toàn nếu người dùng cố tình nhập chữ thay vì nhập số
 						javafx.scene.control.Alert alert = new javafx.scene.control.Alert(
 								javafx.scene.control.Alert.AlertType.ERROR);
 						alert.setTitle("Lỗi định dạng");

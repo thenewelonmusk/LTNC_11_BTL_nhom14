@@ -24,7 +24,6 @@ public class ItemFormViewController {
 	@FXML
 	private ComboBox<String> cbCategory;
 
-	// Extra type-specific blocks
 	@FXML
 	private VBox boxElectronics, boxArt, boxVehicle;
 	@FXML

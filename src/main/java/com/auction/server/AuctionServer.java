@@ -16,7 +16,6 @@ import java.util.concurrent.TimeUnit;
 
 public class AuctionServer {
 	private static final int PORT = 8080;
-	// Dùng ThreadPool để tối ưu hiệu suất thay vì new Thread liên tục
 	private static final ExecutorService pool = Executors.newFixedThreadPool(5);
 	private static final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
@@ -31,7 +30,6 @@ public class AuctionServer {
 		ItemService itemService = new ItemServiceImpl(itemDAO);
 		UserService userService = new UserServiceImpl(userDAO);
 
-		// Thêm shutdown hook để cleanup resources
 		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
 			System.out.println("\n[*] Server đang tắt...");
 			pool.shutdown();
@@ -46,17 +44,15 @@ public class AuctionServer {
 			System.out.println("  Sẵn sàng nhận kết nối từ Client...");
 			System.out.println("=========================================");
 
-			// Kích hoạt luồng theo dõi trạng thái phiên đấu giá real-time
 			startAuctionStatusMonitor(auctionService);
 			System.out.println("[✓] Luồng kiểm tra trạng thái auction real-time đã bắt đầu");
 
 			while (true) {
-				// Chặn ở đây chờ Client kết nối tới
 				Socket clientSocket = serverSocket.accept();
 				System.out.println("[+] Client mới kết nối: " + clientSocket.getInetAddress());
 
-				// Ném Client cho ClientHandler xử lý trên một luồng riêng
-				ClientHandler clientThread = new ClientHandler(clientSocket);
+				ClientHandler clientThread = new ClientHandler(clientSocket, userDAO, itemDAO, auctionDAO, bidDAO,
+						userService, itemService, auctionService, bidService);
 				pool.execute(clientThread);
 			}
 		} catch (IOException e) {
@@ -69,26 +65,21 @@ public class AuctionServer {
 	}
 
 	private static void startAuctionStatusMonitor(AuctionService auctionService) {
-		// Map lưu trạng thái auction trước đó để phát hiện thay đổi
 		final java.util.Map<Long, String> previousStatus = new java.util.concurrent.ConcurrentHashMap<>();
 
 		scheduler.scheduleAtFixedRate(() -> {
 			try {
 				List<Auction> auctionList = auctionService.getAllAuctions();
 				for (Auction auction : auctionList) {
-					// Trạng thái cũ trước khi refresh
 					String oldStatus = previousStatus.getOrDefault(auction.getId(), auction.getStatus().name());
 
-					// Gọi refreshStatus để tự động cập nhật OPEN->RUNNING hoặc RUNNING->FINISHED
 					auctionService.refreshStatus(auction.getId());
 
-					// Lấy trạng thái mới sau khi refresh
 					Auction updatedAuction = auctionService.getAllAuctions().stream()
 							.filter(a -> a.getId().equals(auction.getId())).findFirst().orElse(null);
 
 					if (updatedAuction != null) {
 						String newStatus = updatedAuction.getStatus().name();
-						// Nếu trạng thái thay đổi, phát broadcast
 						if (!oldStatus.equals(newStatus)) {
 							System.out
 									.println("[*] Auction #" + auction.getId() + ": " + oldStatus + " -> " + newStatus);

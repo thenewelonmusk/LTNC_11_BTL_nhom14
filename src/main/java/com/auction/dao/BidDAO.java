@@ -11,8 +11,6 @@ public class BidDAO {
 	public boolean saveBid(BidTransaction bid) throws Exception {
 		String sql = "INSERT INTO bids (auction_id, bidder_id, amount) VALUES (?, ?, ?)";
 
-		// Nếu trong transaction, KHÔNG dùng try-with-resources để tránh đóng connection
-		// sớm
 		if (DatabaseConnection.isInTransaction()) {
 			Connection conn = DatabaseConnection.getConnection();
 			try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -35,7 +33,6 @@ public class BidDAO {
 				throw new Exception("DATABASE_ERROR");
 			}
 		} else {
-			// Bình thường (không transaction), dùng try-with-resources
 			try (Connection conn = DatabaseConnection.getConnection();
 					PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 				stmt.setLong(1, bid.getAuctionId());
@@ -61,8 +58,6 @@ public class BidDAO {
 
 	public List<BidTransaction> findByAuctionId(Long auctionId) {
 		List<BidTransaction> list = new ArrayList<>();
-		// FIX: trả về theo thứ tự thời gian (id ASC) để chart vẽ đúng tiến trình.
-		// Việc sort theo "bid cao nhất ở đầu" để hiển thị bảng được làm ở phía client.
 		String sql = "SELECT * FROM bids WHERE auction_id = ? ORDER BY id ASC";
 
 		if (DatabaseConnection.isInTransaction()) {

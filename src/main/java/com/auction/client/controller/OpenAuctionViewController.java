@@ -67,7 +67,6 @@ public class OpenAuctionViewController {
 			}
 		});
 
-		// Default thời gian
 		dpStart.setValue(LocalDate.now());
 		dpEnd.setValue(LocalDate.now().plusDays(1));
 		txtStartTime.setText(LocalTime.now().withSecond(0).withNano(0).format(DateTimeFormatter.ofPattern("HH:mm")));
@@ -75,7 +74,6 @@ public class OpenAuctionViewController {
 
 		handleReloadItems();
 
-		// Nếu có item được chọn sẵn từ MyItems thì set giá khởi điểm
 		Long sel = Session.get().getSelectedItemId();
 		if (sel != null) {
 			for (ItemOption o : itemOptions) {

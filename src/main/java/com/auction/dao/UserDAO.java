@@ -4,7 +4,6 @@ import com.auction.model.user.*; // Đảm bảo import đúng package chứa Bi
 import java.sql.*;
 
 public class UserDAO {
-	// Nên ném Exception cụ thể để Service bắt được
 	public User authenticate(String username, String password) throws Exception {
 		String sql = "SELECT * FROM users WHERE username = ?";
 
@@ -60,7 +59,6 @@ public class UserDAO {
 				}
 			}
 		} catch (SQLException e) {
-			// nuốt lỗi, fallback ở caller
 		}
 		return null;
 	}

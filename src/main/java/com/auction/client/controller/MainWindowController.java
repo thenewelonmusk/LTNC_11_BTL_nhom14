@@ -21,12 +21,6 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Controller chính của cửa sổ ứng dụng.
- *
- * Nhiệm vụ: - Quản lý login/logout - Điều hướng các view vào contentArea - Nghe
- * broadcast AUCTION_UPDATE và tự refresh các màn hình danh sách liên quan
- */
 public class MainWindowController implements NetworkClient.AuctionUpdateListener {
 
 	@FXML
@@ -42,7 +36,6 @@ public class MainWindowController implements NetworkClient.AuctionUpdateListener
 	@FXML
 	private Button btnLogout;
 
-	// Sidebar buttons
 	@FXML
 	private Button navHome;
 	@FXML
@@ -54,11 +47,9 @@ public class MainWindowController implements NetworkClient.AuctionUpdateListener
 
 	private final List<Button> allNavButtons = new ArrayList<>();
 
-	/** View hiện tại đang được load trong contentArea. */
 	private String currentViewPath;
 	private Object currentViewController;
 
-	/** Singleton để các view con có thể gọi điều hướng. */
 	private static MainWindowController instance;
 
 	public static MainWindowController get() {
@@ -77,15 +68,10 @@ public class MainWindowController implements NetworkClient.AuctionUpdateListener
 		allNavButtons.add(navMyAuctions);
 		allNavButtons.add(navOpenAuction);
 
-		// Lắng nghe broadcast realtime từ server
 		NetworkClient.getInstance().addListener(this);
 
 		showLogin();
 	}
-
-	// =========================================================
-	// LOAD VIEW
-	// =========================================================
 
 	public void loadView(String fxmlPath) {
 		try {
@@ -129,19 +115,16 @@ public class MainWindowController implements NetworkClient.AuctionUpdateListener
 			Method m = target.getClass().getMethod(methodName);
 			m.invoke(target);
 		} catch (NoSuchMethodException ignored) {
-			// Không phải view nào cũng có destroy/refresh
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 
-	/** Gọi khi đăng nhập thành công – cập nhật UI theo role. */
 	public void onLoginSuccess() {
 		applyAuthState(true);
 		showHome();
 	}
 
-	/** Cập nhật UI tùy theo trạng thái đăng nhập. */
 	private void applyAuthState(boolean loggedIn) {
 		btnLogout.setVisible(loggedIn);
 		btnLogout.setManaged(loggedIn);
@@ -179,7 +162,6 @@ public class MainWindowController implements NetworkClient.AuctionUpdateListener
 		}
 	}
 
-	/** Đánh dấu nút đang active. */
 	private void setActive(Button activeBtn) {
 		for (Button b : allNavButtons) {
 			b.getStyleClass().remove("active");
@@ -188,10 +170,6 @@ public class MainWindowController implements NetworkClient.AuctionUpdateListener
 			activeBtn.getStyleClass().add("active");
 		}
 	}
-
-	// =========================================================
-	// PUBLIC NAVIGATION API
-	// =========================================================
 
 	public void showLogin() {
 		cleanupCurrentView();
@@ -219,17 +197,10 @@ public class MainWindowController implements NetworkClient.AuctionUpdateListener
 		loadView("/fxml/views/BrowseAuctionsView.fxml");
 	}
 
-	/**
-	 * Không còn hiển thị tab "Chi tiết phiên" ở sidebar. Hàm này giữ lại để tránh
-	 * vỡ các chỗ gọi cũ.
-	 */
 	public void showAuctionDetail() {
 		showBrowseAuctions();
 	}
 
-	/**
-	 * Chuyển sang màn hình chi tiết phiên đấu giá.
-	 */
 	public void showAuctionDetail(Long auctionId) {
 		if (auctionId == null) {
 			System.err.println("[LỖI] ID phiên đấu giá truyền vào bị null.");
@@ -255,7 +226,6 @@ public class MainWindowController implements NetworkClient.AuctionUpdateListener
 			currentViewPath = "/fxml/views/AuctionDetailView.fxml";
 			currentViewController = controllerObj;
 
-			// Chi tiết phiên vẫn thuộc luồng bidder nên highlight Browse Auctions
 			setActive(navBrowse);
 
 		} catch (IOException e) {
@@ -304,10 +274,6 @@ public class MainWindowController implements NetworkClient.AuctionUpdateListener
 		showLogin();
 	}
 
-	// =========================================================
-	// REAL-TIME UPDATE
-	// =========================================================
-
 	@Override
 	public void onAuctionUpdate(JsonObject data) {
 		if (data == null) {
@@ -315,8 +281,6 @@ public class MainWindowController implements NetworkClient.AuctionUpdateListener
 		}
 
 		Platform.runLater(() -> {
-			// Detail view tự xử lý realtime trong controller của nó.
-			// MainWindow chỉ refresh các màn danh sách liên quan.
 			if (currentViewController instanceof BrowseAuctionsViewController browse) {
 				browse.handleSearch();
 				return;

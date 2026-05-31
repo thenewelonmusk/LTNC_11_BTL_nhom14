@@ -12,7 +12,6 @@ public class Session {
 	private String username;
 	private String role; // BIDDER | SELLER | ADMIN
 
-	// Trạng thái phụ trợ cho điều hướng (ví dụ: xem chi tiết phiên đấu giá nào)
 	private Long selectedAuctionId;
 	private Long selectedItemId;
 

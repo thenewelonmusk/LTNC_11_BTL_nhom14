@@ -34,8 +34,6 @@ public class AuctionServiceImplTest {
 		auctionService = new AuctionServiceImpl(auctionDAO, itemDAO);
 	}
 
-	// ================= OPEN AUCTION TESTS =================
-
 	@Test
 	void testOpenAuction_Success() throws Exception {
 		AuctionRequest req = new AuctionRequest();
@@ -99,8 +97,6 @@ public class AuctionServiceImplTest {
 		assertEquals("Sản phẩm đã có phiên đấu giá đang mở.", res.getMessage());
 	}
 
-	// ================= CANCEL AUCTION TESTS =================
-
 	@Test
 	void testCancelAuction_Success() throws Exception {
 		Auction a = new Auction();
@@ -129,8 +125,6 @@ public class AuctionServiceImplTest {
 		assertFalse(res.isSuccess());
 		assertEquals("Không thể hủy phiên đã kết thúc.", res.getMessage());
 	}
-
-	// ================= FINISH AUCTION TESTS =================
 
 	@Test
 	void testFinishAuction_StillRunning() throws Exception {

@@ -101,7 +101,6 @@ public class BrowseAuctionsViewController implements NetworkClient.AuctionUpdate
 		tblAuctions.setItems(data);
 		handleReload();
 
-		// Đăng ký nhận cập nhật real-time từ Server
 		NetworkClient.getInstance().addListener(this);
 	}
 
@@ -192,13 +191,8 @@ public class BrowseAuctionsViewController implements NetworkClient.AuctionUpdate
 		}
 	}
 
-	/**
-	 * Callback được gọi khi nhận thông điệp cập nhật trạng thái từ Server. Cập nhật
-	 * lại hàng tương ứng trong bảng auction list.
-	 */
 	@Override
 	public void onAuctionUpdate(JsonObject data) {
-		// Chạy trên FX Application Thread để an toàn
 		Platform.runLater(() -> {
 			try {
 				if (!data.has("auctionId")) {
@@ -208,10 +202,8 @@ public class BrowseAuctionsViewController implements NetworkClient.AuctionUpdate
 				Long auctionId = data.get("auctionId").getAsLong();
 				String newStatus = data.has("status") ? data.get("status").getAsString() : null;
 
-				// Tìm row tương ứng trong danh sách hiện tại
 				for (AuctionRow row : this.data) {
 					if (row.getId() != null && row.getId().equals(auctionId)) {
-						// Cập nhật trạng thái nếu có
 						if (newStatus != null && !newStatus.isEmpty()) {
 							row.status.set(newStatus);
 						}

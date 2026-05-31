@@ -61,9 +61,6 @@ public class AuctionDAO {
 	}
 
 	public boolean updateAuction(Auction a) throws Exception {
-		// FIX (anti-sniping): phải UPDATE cả end_time, nếu không thì việc
-		// gia hạn 60 giây trong BidServiceImpl chỉ tồn tại in-memory
-		// và bị mất ngay khi findAuction() đọc lại từ DB.
 		String sql = "UPDATE auctions SET current_price = ?, winner_id = ?, status = ?, end_time = ? WHERE id = ?";
 
 		if (DatabaseConnection.isInTransaction()) {

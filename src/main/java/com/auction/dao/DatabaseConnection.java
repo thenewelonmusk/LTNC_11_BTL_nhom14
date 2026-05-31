@@ -12,6 +12,9 @@ import java.util.concurrent.TimeUnit;
  * MySQL - Support transactions với ThreadLocal
  */
 public class DatabaseConnection {
+	private static final String JDBC_URL = "jdbc:mysql://localhost:3306/auction_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true";
+	private static final String DATABASE_USER = "root";
+	private static final String DATABASE_PASSWORD = "password";
 	private static final int MAXIMUM_POOL_SIZE = 10;
 	private static final int MINIMUM_IDLE = 5;
 	private static final int CONNECTION_TIMEOUT = 5;
@@ -34,10 +37,9 @@ public class DatabaseConnection {
 	private static void initializePool() {
 		try {
 			HikariConfig config = new HikariConfig();
-			config.setJdbcUrl(
-					"jdbc:mysql://localhost:3306/auction_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true");
-			config.setUsername("root");
-			config.setPassword("password");
+			config.setJdbcUrl(JDBC_URL);
+			config.setUsername(DATABASE_USER);
+			config.setPassword(DATABASE_PASSWORD);
 
 			config.setMaximumPoolSize(MAXIMUM_POOL_SIZE); // Tối đa 10 connections trong pool
 			config.setMinimumIdle(MINIMUM_IDLE); // Tối thiểu 5 connections rảnh
@@ -50,7 +52,6 @@ public class DatabaseConnection {
 			config.setLeakDetectionThreshold(TimeUnit.SECONDS.toMillis(LEAK_DETECTION_THRESHOLD)); // 120 giây (tăng từ
 																									// 60)
 
-			// FIX: Thêm connection test queries để kiểm tra health
 			config.setConnectionTestQuery("SELECT 1");
 			config.setValidationTimeout(TimeUnit.SECONDS.toMillis(VALIDATION_TIMEOUT)); // 5000 milis
 
@@ -74,13 +75,11 @@ public class DatabaseConnection {
 	 */
 	public static Connection getConnection() {
 		try {
-			// Nếu đang trong transaction, trả về connection từ ThreadLocal
 			Connection conn = transactionConnection.get();
 			if (conn != null && !conn.isClosed()) {
 				return conn;
 			}
 
-			// Lấy connection từ HikariCP pool
 			if (hikariDataSource != null) {
 				return hikariDataSource.getConnection();
 			} else {

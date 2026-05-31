@@ -2,7 +2,7 @@ package com.auction.dto;
 
 public class BidRequest {
 	private Long auctionId;
-	private Long userId; // Đã thêm userId (chính là người đang ấn nút đấu giá)
+	private Long userId;
 	private double amount;
 
 	public Long getAuctionId() {

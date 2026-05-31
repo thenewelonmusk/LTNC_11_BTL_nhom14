@@ -21,10 +21,8 @@ public class NetworkClient {
 	private BufferedReader in;
 	private final Gson gson;
 
-	// Bộ trao đổi dữ liệu giúp luồng chính nhận đúng gói phản hồi từ luồng nghe nền
 	private final Exchanger<String> responseExchanger = new Exchanger<>();
 
-	// Danh sách các lớp giao diện đăng ký làm Observer
 	private final CopyOnWriteArrayList<AuctionUpdateListener> listeners = new CopyOnWriteArrayList<>();
 
 	public interface AuctionUpdateListener {
@@ -59,7 +57,6 @@ public class NetworkClient {
 			in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 			System.out.println("[Network] Kết nối đến Server thành công!");
 
-			// DUY NHẤT luồng này được phép đọc từ socket.getInputStream()
 			startListening();
 		} catch (IOException e) {
 			System.err.println("[Network] LỖI: Không thể kết nối tới Server.");
@@ -78,15 +75,12 @@ public class NetworkClient {
 					try {
 						JsonObject json = JsonParser.parseString(line).getAsJsonObject();
 
-						// Kiểm tra nếu là tin nhắn đẩy Real-time dạng Broadcast
 						if (json.has("action") && "AUCTION_UPDATE".equals(json.get("action").getAsString())) {
 							JsonObject data = json.getAsJsonObject("data");
 							for (AuctionUpdateListener listener : listeners) {
 								listener.onAuctionUpdate(data);
 							}
 						} else {
-							// Nếu là gói phản hồi Request-Response thông thường -> ném qua Exchanger cho
-							// luồng đang đợi
 							responseExchanger.exchange(line);
 						}
 					} catch (Exception e) {
@@ -116,11 +110,8 @@ public class NetworkClient {
 			String jsonData = gson.toJson(dataPayload);
 			String requestMessage = "{\"action\":\"" + action + "\", \"data\":" + jsonData + "}";
 
-			// Gửi dữ liệu lên Server
 			out.println(requestMessage);
 
-			// Khóa chặn luồng và đứng đợi luồng ngầm startListening đẩy dữ liệu phản hồi về
-			// qua đây
 			return responseExchanger.exchange(null);
 
 		} catch (InterruptedException e) {

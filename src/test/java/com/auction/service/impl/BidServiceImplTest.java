@@ -35,8 +35,6 @@ public class BidServiceImplTest {
 		bidService = new BidServiceImpl(bidDAO, auctionDAO, auctionService);
 	}
 
-	// ================= PLACE BID TESTS =================
-
 	@Test
 	void testPlaceBid_NoAntiSniping_WhenMoreThan30SecondsRemain() throws Exception {
 
@@ -50,7 +48,6 @@ public class BidServiceImplTest {
 		auction.setStatus(AuctionStatus.RUNNING);
 		auction.setCurrentPrice(100.0);
 
-		// còn 5 phút -> KHÔNG được gia hạn
 		LocalDateTime oldEndTime = LocalDateTime.now().plusMinutes(5);
 		auction.setEndTime(oldEndTime);
 
@@ -66,7 +63,6 @@ public class BidServiceImplTest {
 
 		assertEquals("Đặt giá thành công.", res.getMessage());
 
-		// endTime giữ nguyên
 		assertEquals(oldEndTime, auction.getEndTime());
 
 		verify(auctionDAO, times(1)).updateAuction(auction);
@@ -84,7 +80,6 @@ public class BidServiceImplTest {
 
 		when(auctionDAO.findAuction(10L)).thenReturn(a);
 
-		// Chủ (ID=1) tự nhảy vào đấu giá sản phẩm của mình
 		BidResponse res = bidService.placeBid(req, 1L);
 
 		assertFalse(res.isSuccess());
@@ -146,8 +141,6 @@ public class BidServiceImplTest {
 	@Test
 	void testPlaceBid_AntiSniping_ExtendAuction() throws Exception {
 
-		// ===== Arrange =====
-
 		BidRequest req = new BidRequest();
 		req.setAuctionId(10L);
 		req.setAmount(200.0);
@@ -158,7 +151,6 @@ public class BidServiceImplTest {
 		auction.setStatus(AuctionStatus.RUNNING);
 		auction.setCurrentPrice(100.0);
 
-		// còn 20 giây -> phải trigger anti-sniping
 		LocalDateTime oldEndTime = LocalDateTime.now().plusSeconds(20);
 		auction.setEndTime(oldEndTime);
 
@@ -168,32 +160,22 @@ public class BidServiceImplTest {
 
 		when(auctionDAO.updateAuction(auction)).thenReturn(true);
 
-		// ===== Act =====
-
 		BidResponse res = bidService.placeBid(req, 2L);
-
-		// ===== Assert =====
 
 		assertTrue(res.isSuccess());
 
 		assertEquals("Đặt giá thành công & Hệ thống đã tự động gia hạn phiên đấu giá!", res.getMessage());
 
-		// endTime phải được +60s
 		assertEquals(oldEndTime.plusSeconds(60), auction.getEndTime());
 
-		// current price phải update
 		assertEquals(200.0, auction.getCurrentPrice());
 
-		// winner phải update
 		assertEquals(2L, auction.getWinnerId());
 
-		// verify save bid
 		verify(bidDAO, times(1)).saveBid(any(BidTransaction.class));
 
-		// verify update auction
 		verify(auctionDAO, times(1)).updateAuction(auction);
 
-		// verify refresh status
 		verify(auctionService, times(1)).refreshStatus(10L);
 	}
 }

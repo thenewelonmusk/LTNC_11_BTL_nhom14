@@ -7,7 +7,6 @@ public class ItemFactory {
 	}
 
 	public static Item create(ItemRequest req) {
-		// 1. Kiểm tra an toàn đầu vào
 		if (req == null || req.getType() == null) {
 			throw new IllegalArgumentException("Dữ liệu yêu cầu hoặc loại sản phẩm không được để trống");
 		}
@@ -15,7 +14,6 @@ public class ItemFactory {
 		Item item;
 		String type = req.getType().toUpperCase();
 
-		// 2. Khởi tạo đối tượng cụ thể dựa trên type
 		switch (type) {
 			case "ELECTRONICS" :
 				item = new Electronics(req.getDeviceBrand(), req.getWarrantyMonths());

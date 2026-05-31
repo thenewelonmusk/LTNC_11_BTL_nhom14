@@ -33,7 +33,6 @@ public class UserServiceImpl implements UserService {
 			User user = userDAO.authenticate(req.getUsername(), req.getPassword());
 			String role = user.getClass().getSimpleName().toUpperCase();
 
-			// SỬA: Đã thêm user.getId() vào Constructor
 			return new LoginResponse(true, SUCCESS_LOGIN, user.getId(), user.getUsername(), role);
 
 		} catch (Exception e) {

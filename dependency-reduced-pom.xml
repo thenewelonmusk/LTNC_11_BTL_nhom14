@@ -7,56 +7,6 @@
   <build>
     <plugins>
       <plugin>
-        <artifactId>maven-shade-plugin</artifactId>
-        <version>3.6.0</version>
-        <executions>
-          <execution>
-            <id>shade-server</id>
-            <phase>package</phase>
-            <goals>
-              <goal>shade</goal>
-            </goals>
-            <configuration>
-              <shadedArtifactAttached>true</shadedArtifactAttached>
-              <shadedClassifierName>server</shadedClassifierName>
-              <finalName>auction-server</finalName>
-              <transformers>
-                <transformer>
-                  <mainClass>com.auction.server.AuctionServer</mainClass>
-                </transformer>
-              </transformers>
-            </configuration>
-          </execution>
-          <execution>
-            <id>shade-client</id>
-            <phase>package</phase>
-            <goals>
-              <goal>shade</goal>
-            </goals>
-            <configuration>
-              <shadedArtifactAttached>true</shadedArtifactAttached>
-              <shadedClassifierName>client</shadedClassifierName>
-              <finalName>auction-client</finalName>
-              <transformers>
-                <transformer>
-                  <mainClass>com.auction.client.Launcher</mainClass>
-                </transformer>
-              </transformers>
-              <filters>
-                <filter>
-                  <artifact>*:*</artifact>
-                  <excludes>
-                    <exclude>META-INF/*.SF</exclude>
-                    <exclude>META-INF/*.DSA</exclude>
-                    <exclude>META-INF/*.RSA</exclude>
-                  </excludes>
-                </filter>
-              </filters>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.13.0</version>
         <configuration>
@@ -71,66 +21,122 @@
         </configuration>
       </plugin>
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>exec-maven-plugin</artifactId>
-        <version>3.4.1</version>
-      </plugin>
-      <plugin>
-        <groupId>org.openjfx</groupId>
-        <artifactId>javafx-maven-plugin</artifactId>
-        <version>0.0.8</version>
-        <configuration>
-          <mainClass>com.auction.clientapp.ClientApp</mainClass>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>com.diffplug.spotless</groupId>
-        <artifactId>spotless-maven-plugin</artifactId>
-        <version>2.43.0</version>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.6.0</version>
         <executions>
           <execution>
-            <phase>compile</phase>
+            <id>shade-server</id>
+            <phase>package</phase>
             <goals>
-              <goal>apply</goal>
+              <goal>shade</goal>
             </goals>
+            <configuration>
+              <finalName>server</finalName>
+              <shadedArtifactAttached>false</shadedArtifactAttached>
+              <transformers>
+                <transformer>
+                  <mainClass>com.auction.server.AuctionServer</mainClass>
+                </transformer>
+                <transformer />
+              </transformers>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                    <exclude>module-info.class</exclude>
+                    <exclude>META-INF/versions/9/module-info.class</exclude>
+                    <exclude>META-INF/substrate/config/**</exclude>
+                    <exclude>META-INF/MANIFEST.MF</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+            </configuration>
+          </execution>
+          <execution>
+            <id>shade-client</id>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <finalName>client</finalName>
+              <shadedArtifactAttached>false</shadedArtifactAttached>
+              <transformers>
+                <transformer>
+                  <mainClass>com.auction.client.Launcher</mainClass>
+                </transformer>
+                <transformer />
+              </transformers>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                    <exclude>module-info.class</exclude>
+                    <exclude>META-INF/versions/9/module-info.class</exclude>
+                    <exclude>META-INF/substrate/config/**</exclude>
+                    <exclude>META-INF/MANIFEST.MF</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+            </configuration>
           </execution>
         </executions>
-        <configuration>
-          <java>
-            <eclipse />
-            <removeUnusedImports />
-          </java>
-        </configuration>
       </plugin>
     </plugins>
   </build>
   <dependencies>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter</artifactId>
-      <version>5.10.3</version>
+      <artifactId>junit-jupiter-api</artifactId>
+      <version>5.11.3</version>
       <scope>test</scope>
       <exclusions>
         <exclusion>
-          <artifactId>junit-jupiter-api</artifactId>
-          <groupId>org.junit.jupiter</groupId>
+          <artifactId>opentest4j</artifactId>
+          <groupId>org.opentest4j</groupId>
         </exclusion>
         <exclusion>
-          <artifactId>junit-jupiter-params</artifactId>
-          <groupId>org.junit.jupiter</groupId>
+          <artifactId>junit-platform-commons</artifactId>
+          <groupId>org.junit.platform</groupId>
         </exclusion>
         <exclusion>
-          <artifactId>junit-jupiter-engine</artifactId>
-          <groupId>org.junit.jupiter</groupId>
+          <artifactId>apiguardian-api</artifactId>
+          <groupId>org.apiguardian</groupId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <version>5.11.3</version>
+      <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <artifactId>junit-platform-engine</artifactId>
+          <groupId>org.junit.platform</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>apiguardian-api</artifactId>
+          <groupId>org.apiguardian</groupId>
         </exclusion>
       </exclusions>
     </dependency>
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
-      <version>5.14.1</version>
+      <version>5.14.2</version>
       <scope>test</scope>
       <exclusions>
+        <exclusion>
+          <artifactId>byte-buddy</artifactId>
+          <groupId>net.bytebuddy</groupId>
+        </exclusion>
         <exclusion>
           <artifactId>byte-buddy-agent</artifactId>
           <groupId>net.bytebuddy</groupId>
@@ -143,31 +149,20 @@
     </dependency>
     <dependency>
       <groupId>org.mockito</groupId>
+      <artifactId>mockito-inline</artifactId>
+      <version>5.2.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
       <artifactId>mockito-junit-jupiter</artifactId>
-      <version>5.14.1</version>
+      <version>5.14.2</version>
       <scope>test</scope>
-      <exclusions>
-        <exclusion>
-          <artifactId>junit-jupiter-api</artifactId>
-          <groupId>org.junit.jupiter</groupId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>net.bytebuddy</groupId>
-      <artifactId>byte-buddy</artifactId>
-      <version>1.15.9</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>mysql</groupId>
-      <artifactId>mysql-connector-java</artifactId>
-      <version>8.0.33</version>
-      <scope>compile</scope>
     </dependency>
   </dependencies>
   <properties>
     <maven.compiler.release>17</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <javafx.version>21</javafx.version>
   </properties>
 </project>

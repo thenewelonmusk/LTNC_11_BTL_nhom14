@@ -16,7 +16,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class BidServiceImpl implements BidService {
-	// Error messages
 	private static final String ERROR_INVALID_REQUEST = "Yêu cầu không hợp lệ.";
 	private static final String ERROR_AUCTION_NOT_FOUND = "Không tìm thấy phiên đấu giá.";
 	private static final String ERROR_AUCTION_NOT_RUNNING = "Phiên đấu giá chưa diễn ra hoặc đã kết thúc.";
@@ -35,7 +34,6 @@ public class BidServiceImpl implements BidService {
 	private final AuctionDAO auctionDAO;
 	private final AuctionService auctionService;
 
-	// Quản lý khóa chống đụng độ (Concurrent Bidding) per-auction.
 	private final ConcurrentHashMap<Long, ReentrantLock> auctionLocks = new ConcurrentHashMap<>();
 
 	public BidServiceImpl(BidDAO bidDAO, AuctionDAO auctionDAO, AuctionService auctionService) {
@@ -56,18 +54,14 @@ public class BidServiceImpl implements BidService {
 
 		lock.lock();
 		try {
-			// Mở Transaction bao trọn thao tác đặt giá
 			com.auction.dao.DatabaseConnection.beginTransaction();
 
 			BidResponse response = processBid(request, bidderId);
 
-			// Tất cả an toàn thì mới Commit
 			try {
 				com.auction.dao.DatabaseConnection.commit();
 			} catch (Exception commitError) {
 				System.err.println("[BidService] Lỗi commit nhưng dữ liệu có thể đã lưu: " + commitError.getMessage());
-				// Commit fail nhưng không rollback, vì dữ liệu đã được lưu
-				// (HikariCP auto-commit hoặc connection được return trước khi commit)
 				com.auction.dao.DatabaseConnection.cleanup();
 			}
 			return response;
@@ -109,18 +103,15 @@ public class BidServiceImpl implements BidService {
 			return new BidResponse(false, ERROR_BID_TOO_LOW, null, auction.getCurrentPrice());
 		}
 
-		// 1. Lưu giao dịch của người dùng
 		BidTransaction bid = new BidTransaction();
 		bid.setAuctionId(auctionId);
 		bid.setBidderId(bidderId);
 		bid.setAmount(amount);
 		bidDAO.saveBid(bid);
 
-		// 2. Cập nhật giá hiện tại
 		auction.setCurrentPrice(amount);
 		auction.setWinnerId(bidderId);
 
-		// 3. Logic Anti-sniping
 		boolean extended = false;
 		LocalDateTime now = LocalDateTime.now();
 		if (auction.getEndTime() != null
@@ -135,7 +126,6 @@ public class BidServiceImpl implements BidService {
 
 		auctionDAO.updateAuction(auction);
 
-		// Trả kết quả (Khoan hãy Commit!)
 		return new BidResponse(true, extended ? SUCCESS_BID_EXTENDED : SUCCESS_BID, bid, amount);
 	}
 

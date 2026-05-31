@@ -1,275 +1,124 @@
-# 🏛 Hệ thống Đấu giá Trực tuyến – Nhóm 14
+# Hệ Thống Đấu Giá Trực Tuyến (Online Auction System)
+**Bài Tập Lớn Môn Lập Trình Nâng Cao (LTNC) - Học Kỳ II, 2025–2026**
 
-> **Môn:** Lập trình nâng cao  
-> **Đề tài:** Hệ thống đấu giá trực tuyến (Online Auction System)  
-> **Kiến trúc:** JavaFX (client) ↔ Socket TCP ↔ Java Server ↔ MySQL
+## 1. Mô tả bài toán và phạm vi hệ thống
+Hệ thống Đấu giá trực tuyến là một ứng dụng phần mềm được xây dựng theo kiến trúc **Client-Server**, cho phép nhiều người dùng kết nối cùng lúc để tham gia các phiên đấu giá theo thời gian thực. Hệ thống sử dụng mô hình **MVC (Model-View-Controller)** ở phía Client và chia lớp (Controller - Service - DAO) ở phía Server để tối ưu hoá việc quản lý mã nguồn.
 
----
+**Phạm vi người dùng:**
+- **Seller (Người bán):** Có quyền đăng bán tài sản, quản lý các phiên đấu giá của mình.
+- **Bidder (Người mua):** Tham gia theo dõi, cạnh tranh đặt giá trực tiếp trên giao diện và xem lịch sử giá.
 
-## 📋 Mục lục
+## 2. Công nghệ sử dụng và Môi trường chạy
+Hệ thống được phát triển thuần bằng công nghệ Java hệ sinh thái tiêu chuẩn.
 
-1. [Yêu cầu hệ thống](#1-yêu-cầu-hệ-thống)
-2. [Cài đặt MySQL Database](#2-cài-đặt-mysql-database)
-3. [Cấu hình kết nối](#3-cấu-hình-kết-nối-trong-code)
-4. [Build & chạy dự án](#4-build--chạy-dự-án)
-5. [Tài khoản mẫu](#5-tài-khoản-mẫu)
-6. [Cấu trúc bảng](#6-cấu-trúc-bảng)
-7. [Cấu trúc thư mục](#7-cấu-trúc-thư-mục-dự-án)
-8. [Tính năng chính](#8-tính-năng-chính)
-9. [Xử lý sự cố](#9-xử-lý-sự-cố-troubleshooting)
+- **Ngôn ngữ lập trình:** Java (Yêu cầu JDK 17 trở lên).
+- **Giao diện (GUI):** JavaFX, FXML, CSS.
+- **Mạng & Giao tiếp:** Java Socket thuần (TCP/IP), JSON (thông qua thư viện `Gson`).
+- **Cơ sở dữ liệu:** MySQL (Giao tiếp qua JDBC, sử dụng `HikariCP` cho Connection Pooling).
+- **Công cụ quản lý & Build:** Maven.
+- **Kiểm thử (Testing):** JUnit 5, Mockito.
+- **CI/CD:** GitHub Actions (Tự động chạy Unit Test khi push code).
 
----
+**Yêu cầu cài đặt (Prerequisites):**
+- Máy tính phải cài đặt sẵn **JDK 17+** và **Maven**.
+- Cài đặt **MySQL Server** và khởi chạy service database.
 
-## 1. Yêu cầu hệ thống
+## 3. Cấu trúc thư mục dự án
+Dự án được tổ chức theo chuẩn cấu trúc của Maven:
 
-| Thành phần | Phiên bản tối thiểu |
-|---|---|
-| **JDK** | Java 17 (khuyến nghị 21) |
-| **Maven** | 3.6+ |
-| **MySQL Server** | 8.0+ |
-| **JavaFX** | 21 (đã khai báo trong `pom.xml`) |
-| **IDE** | IntelliJ IDEA / Eclipse / NetBeans |
-| **OS** | Windows 10/11, macOS, Linux |
+```text
+LTNC_11_BTL_nhom14/
+├── database/            # Chứa file script tạo CSDL (schema.sql)
+├── src/
+│   ├── main/
+│   │   ├── java/com/auction/
+│   │   │   ├── client/  # Chứa GUI (JavaFX), Controllers và Socket Client
+│   │   │   ├── server/  # Socket Server (AuctionServer, ClientHandler dùng Thread Pool)
+│   │   │   ├── dao/     # Tầng Data Access Object giao tiếp với MySQL
+│   │   │   ├── dto/     # Tầng Data Transfer Object (Đóng gói Request/Response)
+│   │   │   ├── model/   # Các Entity tĩnh (User, Item, Auction, BidTransaction)
+│   │   │   └── service/ # Tầng Business Logic trung tâm
+│   │   └── resources/   # Chứa các file giao diện (.fxml) và style (.css)
+│   └── test/            # Thư mục chứa các Unit Test (Mockito) cho Service, DAO, Network
+├── pom.xml              # Tệp tin cấu hình các Dependencies của Maven
+└── README.md            # Tài liệu dự án
 
----
+```
 
-## 2. Cài đặt MySQL Database
+## 4. Vị trí các file đóng gói (.jar)
 
-### Bước 1 – Cài MySQL Server
+Sau khi thực hiện lệnh build Maven (`mvn clean package`), hệ thống sẽ tạo ra các tệp tin thực thi động độc lập tại thư mục `target/`.
 
-- **Windows:** Tải MySQL Installer từ <https://dev.mysql.com/downloads/installer/>, chọn `MySQL Server 8.0` + `MySQL Workbench`.
-- **macOS:** `brew install mysql` rồi `brew services start mysql`
-- **Linux (Ubuntu):** `sudo apt install mysql-server` rồi `sudo systemctl start mysql`
+* **Server Executable:** `target/server.jar` (hoặc tên tương ứng định nghĩa trong `maven-shade-plugin`).
+* **Client Executable:** `target/client.jar`.
 
-Trong quá trình cài, đặt mật khẩu cho user `root` (mặc định trong code là `password`, xem mục 3 nếu cần đổi).
+*(Lưu ý: Các file này là Fat/Uber JAR, đã được đóng gói kèm toàn bộ thư viện như Gson, MySQL Connector, JavaFX).*
 
-### Bước 2 – Chạy script tạo database
+## 5. Hướng dẫn cài đặt và khởi chạy
 
-Mở terminal/CMD ở thư mục gốc dự án rồi chạy một trong các cách sau:
+Vui lòng làm theo trình tự dưới đây để khởi chạy hệ thống tránh lỗi mất kết nối (Connection Refused).
 
-**Cách 1 – Dòng lệnh (nhanh nhất):**
+### Bước 1: Khởi tạo Cơ sở dữ liệu
+
+1. Mở MySQL Workbench hoặc Terminal.
+2. Import file `database/schema.sql` để tạo database `auction_system` và các bảng dữ liệu.
+3. Cập nhật thông tin tài khoản (Username/Password) truy cập CSDL trong cấu hình mã nguồn (tại `DatabaseConnection.java` hoặc file properties tương ứng).
+
+### Bước 2: Build dự án bằng Maven
+
+Mở Terminal tại thư mục gốc của dự án và chạy lệnh:
 
 ```bash
-mysql -u root -p < database/schema.sql
+mvn clean package
+
 ```
 
-Nhập mật khẩu MySQL khi được yêu cầu.
+### Bước 3: Khởi chạy Server (Bắt buộc chạy trước)
 
-**Cách 2 – MySQL Workbench:**
-
-1. Mở MySQL Workbench, kết nối tới `localhost:3306`
-2. `File → Open SQL Script…` chọn `database/schema.sql`
-3. Nhấn `⚡ Execute` (Ctrl+Shift+Enter)
-
-**Cách 3 – CMD/PowerShell trên Windows:**
-
-```cmd
-"C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -u root -p auction_db < database\schema.sql
-```
-
-### Bước 3 – Kiểm tra
-
-```sql
-USE auction_db;
-SHOW TABLES;
--- Phải thấy: users, items, auctions, bids
-
-SELECT username, role FROM users;
--- Phải có 6 dòng tài khoản mẫu
-```
-
----
-
-## 3. Cấu hình kết nối trong code
-
-Mở file: `src/main/java/com/auction/dao/DatabaseConnection.java`
-
-```java
-String url  = "jdbc:mysql://localhost:3306/auction_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true";
-String user = "root";
-String pass = "password";   // ⚠️ Sửa thành mật khẩu MySQL của bạn
-```
-
-> 💡 **Lưu ý:** Nếu MySQL của bạn dùng port khác `3306` hoặc user khác `root`, sửa luôn ở dòng `url` và `user`.
-
----
-
-## 4. Build & chạy dự án
-
-### 4.1. Build bằng Maven
+Mở một cửa sổ Terminal mới và gõ lệnh:
 
 ```bash
-mvn clean compile
+java -jar target/server.jar
+
 ```
 
-Lần đầu Maven sẽ tải các thư viện (JavaFX 21, Gson, MySQL Connector 8.0.33…) — chờ 1-2 phút.
+*(Server sẽ bắt đầu lắng nghe tại cổng `8080` (hoặc cổng cấu hình). Hãy giữ nguyên cửa sổ terminal này).*
 
-### 4.2. Chạy Server (bắt buộc trước)
+### Bước 4: Khởi chạy Client (Có thể mở nhiều cửa sổ)
+
+Mở một hoặc nhiều cửa sổ Terminal mới (mỗi cửa sổ đóng vai trò là một người dùng) và gõ lệnh:
 
 ```bash
-mvn exec:java -Dexec.mainClass="com.auction.server.AuctionServer"
-```
-
-Hoặc trong IntelliJ: chuột phải `AuctionServer.java` → `Run 'AuctionServer.main()'`.
-
-Khi server chạy thành công sẽ thấy log đại loại:
+java -jar target/client.jar
 
 ```
-[Server] Đang lắng nghe trên port 8080...
-```
 
-### 4.3. Chạy Client (JavaFX UI)
+Giao diện phần mềm JavaFX sẽ hiện lên và tự động kết nối Socket tới Server.
 
-Mở **terminal khác**, chạy:
+## 6. Danh sách chức năng đã hoàn thành
 
-```bash
-mvn javafx:run
-```
+Theo barem đồ án, hệ thống đã xử lý và đạt được các tính năng cốt lõi sau:
 
-Hoặc trong IntelliJ: chạy `com.auction.client.MainApp` (hoặc `Launcher`).
+* [x] **Áp dụng OOP & Design Patterns:** Sử dụng triệt để *Singleton* (Network), *Factory Method* (Tạo Item: Electronics, Art, Vehicle) và *Observer* (Realtime Update qua Socket).
+* [x] **Kiến trúc mã sạch:** Injection thông qua Constructor (Dependency Injection cho ClientHandler), chia tầng DAO và Service.
+* [x] **Đăng ký / Đăng nhập:** Phân quyền theo Bidder và Seller.
+* [x] **Quản lý Sản phẩm & Phiên đấu giá:** Đăng bán, mở/đóng phiên đấu giá.
+* [x] **Đấu giá thời gian thực (Real-time update):** Mọi lượt bid đều được đẩy ngay lập tức (Broadcast) đến tất cả các Client đang bật ứng dụng thông qua Socket mà không cần F5/Reload trang.
+* [x] **Trực quan hóa lịch sử giá (Visualization):** Sử dụng JavaFX `LineChart` để vẽ biểu đồ sự biến thiên của giá theo thời gian thực.
+* [x] **Chống bắn tỉa (Anti-sniping):** Cập nhật quy tắc cộng thêm thời gian nếu có lượt Bid ở những giây cuối cùng.
+* [x] **Bảo vệ luồng (Thread-safe):** Chặn đứng nguy cơ Race-condition và Lost-update khi nhiều luồng cùng ghi giá.
+* [x] **Tích hợp CI/CD & Testing:** Có workflow GitHub Actions để chạy bộ bài kiểm thử JUnit 5 + Mockito 100% không dính líu DB thật.
+* *Chú ý:* Nhóm đã quyết định loại bỏ tính năng *Auto-Bidding* theo thiết kế mới nhất để tập trung đảm bảo tính ổn định và an toàn tài nguyên mạng (Không bị dính lỗi NullPointerException hoặc ngập lụt Server).
 
-> 💡 **Mẹo demo realtime:** chạy **2 client cùng lúc**, đăng nhập bằng 2 tài khoản BIDDER khác nhau (vd `bidder1` và `bidder2`), cùng vào 1 phiên đấu giá. Khi 1 bên đặt giá → bên kia thấy biểu đồ tự cập nhật ngay tức thì.
+## 7. Tài liệu và Liên kết
+
+* **Báo cáo tổng kết (PDF):** [Xem tại Google Drive](https://drive.google.com/file/d/1myCkzWTOL_62xOK1ZDLG8Mh1yIa2vdyB/view?usp=sharing)
+* **Video Demo Hệ thống:** `[Link Video YouTube/Drive sẽ cập nhật tại đây]`
 
 ---
 
-## 5. Tài khoản mẫu
-
-Script `schema.sql` đã tạo sẵn các tài khoản sau:
-
-| Username  | Password    | Role    | Ghi chú |
-|-----------|-------------|---------|---------|
-| `admin`   | `admin123`  | ADMIN   | Quản trị |
-| `seller1` | `seller123` | SELLER  | Đã có items + auctions mẫu |
-| `seller2` | `seller123` | SELLER  | Đã có items + auctions mẫu |
-| `bidder1` | `bidder123` | BIDDER  | Đã có lịch sử bid mẫu |
-| `bidder2` | `bidder123` | BIDDER  | Đã có lịch sử bid mẫu |
-| `bidder3` | `bidder123` | BIDDER  | Đã có lịch sử bid mẫu |
-
-> ⚠️ Mật khẩu lưu **plain-text** trong DB để khớp với code `UserDAO.java` hiện tại. Trong môi trường production cần băm bằng BCrypt/Argon2.
-
----
-
-## 6. Cấu trúc bảng
+**Tác giả:** Nhóm 14 - Lập trình Nâng Cao
 
 ```
-┌──────────┐         ┌──────────┐         ┌──────────────┐
-│  users   │────────▶│  items   │────────▶│   auctions   │
-│  (id)    │ seller  │ (id,     │ item_id │  (id,        │
-│          │         │  seller) │         │   winner_id) │
-└──────────┘         └──────────┘         └──────┬───────┘
-                                                  │ auction_id
-                                                  ▼
-                                          ┌──────────────┐
-                                          │     bids     │
-                                          └──────────────┘
-```
-
-| Bảng | Mô tả |
-|---|---|
-| **users**     | Tài khoản người dùng (BIDDER / SELLER / ADMIN) |
-| **items**     | Sản phẩm do seller đăng |
-| **auctions**  | Phiên đấu giá gắn với 1 sản phẩm |
-| **bids**      | Lịch sử đặt giá — nguồn dữ liệu cho biểu đồ realtime |
-
-Tất cả khóa ngoại đều có `ON DELETE CASCADE` (trừ `winner_id` dùng `SET NULL`), nên khi xóa user/item sẽ tự dọn dữ liệu phụ thuộc.
-
----
-
-## 7. Cấu trúc thư mục dự án
 
 ```
-auctionproj_fixed/
-├── database/
-│   └── schema.sql                      ⭐ Script tạo DB
-├── pom.xml                              # Cấu hình Maven
-├── README.md                            # File này
-└── src/main/
-    ├── java/com/auction/
-    │   ├── client/                      # JavaFX UI (controllers, views)
-    │   │   ├── controller/
-    │   │   │   └── AuctionDetailViewController.java  ⭐ Có chart realtime
-    │   │   ├── network/NetworkClient.java
-    │   │   ├── MainApp.java
-    │   │   └── Session.java
-    │   ├── server/                      # TCP server + handler
-    │   │   ├── AuctionServer.java       ⭐ Main entry của Server
-    │   │   └── ClientHandler.java
-    │   ├── dao/                         # JDBC Data Access
-    │   │   ├── DatabaseConnection.java  ⭐ Sửa user/pass ở đây
-    │   │   ├── UserDAO.java
-    │   │   ├── ItemDAO.java
-    │   │   ├── AuctionDAO.java
-    │   │   └── BidDAO.java
-    │   ├── service/                     # Business logic
-    │   ├── model/                       # Entity classes
-    │   └── dto/                         # Request/Response objects
-    └── resources/
-        ├── fxml/views/                  # FXML giao diện
-        │   └── AuctionDetailView.fxml   ⭐ View có LineChart
-        └── css/styles.css
-```
-
----
-
-## 8. Tính năng chính
-
-### Cho BIDDER
-- 🔍 Duyệt danh sách phiên đấu giá
-- 🎯 Vào chi tiết phiên, đặt giá thầu thủ công
-- 💰 Quick-bid: nút `+10.000` / `+50.000` / `+100.000`
-- 📈 **Biểu đồ giá realtime** — tự động vẽ điểm mới khi có bid (KHÔNG cần refresh)
-- ⏰ Đồng hồ đếm ngược thời gian còn lại (đỏ cảnh báo dưới 60s)
-- 👑 Highlight bidder cao nhất + tô màu các bid của chính mình
-- 📜 Lịch sử bid của bản thân
-
-### Cho SELLER
-- ➕ Tạo / sửa / xóa sản phẩm (Vehicle, Electronics, Art)
-- 🚀 Mở phiên đấu giá cho sản phẩm
-- 🛎 Quản lý các phiên đã mở
-- 📦 Quản lý kho sản phẩm
-
-### Cơ chế Realtime
-Server broadcast gói `AUCTION_UPDATE` qua TCP tới tất cả client đang xem cùng phiên. Client dùng pattern **Observer** (`NetworkClient.AuctionUpdateListener`) để các view tự cập nhật UI mà không cần polling.
-
----
-
-## 9. Xử lý sự cố (Troubleshooting)
-
-### ❌ `Communications link failure` / `Access denied for user 'root'@'localhost'`
-→ Sai mật khẩu MySQL. Sửa trong `DatabaseConnection.java`.
-
-### ❌ `Unknown database 'auction_db'`
-→ Chưa chạy `schema.sql`. Quay lại **Bước 2**.
-
-### ❌ `Public Key Retrieval is not allowed`
-→ Đã có `allowPublicKeyRetrieval=true` trong URL JDBC, không cần làm gì. Nếu vẫn báo lỗi, kiểm tra MySQL Connector version (cần 8.0+).
-
-### ❌ Server bind port 8080 fail (`Address already in use`)
-→ Có process khác đang chiếm port 8080. Tắt nó hoặc đổi port trong `AuctionServer.java` và `NetworkClient.java`.
-
-### ❌ JavaFX không chạy: `Error: JavaFX runtime components are missing`
-→ Dùng `mvn javafx:run` thay vì chạy trực tiếp `java`. Hoặc cài JavaFX SDK 21 và thêm `--module-path` thủ công.
-
-### ❌ Biểu đồ realtime không cập nhật
-- Kiểm tra Server đang chạy (port 8080)
-- Kiểm tra log Server xem `AUCTION_UPDATE` có được broadcast không
-- Tab Console của client xem có `[Network] Kết nối đến Server thành công!` không
-
-### 🔄 Reset toàn bộ DB về trạng thái ban đầu
-```bash
-mysql -u root -p < database/schema.sql
-```
-Script có `DROP DATABASE IF EXISTS auction_db` ở đầu nên sẽ tự xóa & tạo lại.
-
----
-
-## 📝 Ghi chú phát triển
-
-- **Encoding:** UTF-8 (utf8mb4) — hỗ trợ tiếng Việt + emoji
-- **Timezone:** UTC (cấu hình trong JDBC URL)
-- **Concurrency:** Server xử lý mỗi client bằng 1 thread (`ClientHandler`). Bid được serialize qua `synchronized` để tránh race condition.
-- **Format giá:** VND, hiển thị `1,000,000 ₫` ở UI; lưu DB dạng `DECIMAL(18,2)`.
-
----
-
-**👥 Nhóm 14 – LTNC 2025**

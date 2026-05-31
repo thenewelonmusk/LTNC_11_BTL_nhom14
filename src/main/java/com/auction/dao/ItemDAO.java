@@ -24,7 +24,6 @@ public class ItemDAO {
 
 			int affectedRows = stmt.executeUpdate();
 			if (affectedRows > 0) {
-				// Hứng ID tự động tăng từ Database
 				try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
 					if (generatedKeys.next()) {
 						return generatedKeys.getLong(1);

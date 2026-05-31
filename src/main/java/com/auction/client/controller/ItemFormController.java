@@ -40,7 +40,6 @@ public class ItemFormController {
 		if (resJson != null && !resJson.equals("null")) { // Kiểm tra chuỗi trả về
 			ItemResponse res = gson.fromJson(resJson, ItemResponse.class);
 
-			// KIỂM TRA AN TOÀN: res phải khác null mới được gọi hàm
 			if (res != null) {
 				showAlert(res.getMessage());
 				if (res.isSuccess() && res.getItemData() != null) {

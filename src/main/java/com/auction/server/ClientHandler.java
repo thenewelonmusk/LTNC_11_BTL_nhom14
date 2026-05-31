@@ -18,13 +18,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 public class ClientHandler implements Runnable {
 
-	// DANH SÁCH QUẢN LÝ CÁC CLIENT ĐANG KẾT NỐI (Dùng cho Broadcast Real-time)
 	private static final CopyOnWriteArrayList<ClientHandler> activeHandlers = new CopyOnWriteArrayList<>();
 
-	// Cache username theo id để khỏi query lại trên mỗi broadcast
 	private static final ConcurrentHashMap<Long, String> usernameCache = new ConcurrentHashMap<>();
 
-	// Static Gson để dùng cho broadcast static methods
 	private static final Gson staticGson = new GsonBuilder()
 			.registerTypeAdapter(LocalDateTime.class, new TypeAdapter<LocalDateTime>() {
 				@Override
@@ -50,9 +47,19 @@ public class ClientHandler implements Runnable {
 	private UserDAO userDAO;
 	private ItemDAO itemDAO;
 	private AuctionDAO auctionDAO;
+	private BidDAO bidDAO;
 
-	public ClientHandler(Socket socket) {
+	public ClientHandler(Socket socket, UserDAO userDAO, ItemDAO itemDAO, AuctionDAO auctionDAO, BidDAO bidDAO,
+			UserService userService, ItemService itemService, AuctionService auctionService, BidService bidService) {
 		this.clientSocket = socket;
+		this.userDAO = userDAO;
+		this.itemDAO = itemDAO;
+		this.auctionDAO = auctionDAO;
+		this.bidDAO = bidDAO;
+		this.auctionService = auctionService;
+		this.userService = userService;
+		this.itemService = itemService;
+		this.bidService = bidService;
 
 		this.gson = new GsonBuilder().registerTypeAdapter(LocalDateTime.class, new TypeAdapter<LocalDateTime>() {
 			@Override
@@ -64,16 +71,6 @@ public class ClientHandler implements Runnable {
 				return LocalDateTime.parse(in.nextString());
 			}
 		}).create();
-
-		this.userDAO = new UserDAO();
-		this.itemDAO = new ItemDAO();
-		this.auctionDAO = new AuctionDAO();
-		BidDAO bidDAO = new BidDAO();
-
-		this.userService = new UserServiceImpl(userDAO);
-		this.itemService = new ItemServiceImpl(itemDAO);
-		this.auctionService = new AuctionServiceImpl(this.auctionDAO, itemDAO);
-		this.bidService = new BidServiceImpl(bidDAO, this.auctionDAO, this.auctionService);
 
 		try {
 			in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
@@ -89,8 +86,8 @@ public class ClientHandler implements Runnable {
 	 * PHƯƠNG THỨC PHÁT TIN BROADCAST (Observer Pattern qua Socket) Đẩy thông điệp
 	 * JSON tới tất cả các Client đang bật ứng dụng.
 	 *
-	 * SỬA: thêm synchronized trên handler.out để tránh hai broadcast cùng lúc ghi
-	 * xen kẽ vào cùng một PrintWriter -> tạo JSON hỏng trên client.
+	 * thêm synchronized trên handler.out để tránh hai broadcast cùng lúc ghi xen kẽ
+	 * vào cùng một PrintWriter -> tạo JSON hỏng trên client.
 	 */
 	public static void broadcastUpdate(String updateMessage) {
 		for (ClientHandler handler : activeHandlers) {
@@ -162,8 +159,6 @@ public class ClientHandler implements Runnable {
 		}
 		dataFields.addProperty("message", overrideMessage != null ? overrideMessage : "Có lượt đặt giá mới!");
 
-		// Lấy endTime mới nhất từ DB (đã được persist nhờ AuctionDAO.updateAuction đã
-		// sửa).
 		try {
 			Auction currentAuction = auctionDAO.findAuction(auctionId);
 			if (currentAuction != null) {
@@ -231,20 +226,15 @@ public class ClientHandler implements Runnable {
 					case "PLACE_BID" : {
 						BidRequest bReq = gson.fromJson(dataObj, BidRequest.class);
 
-						// Thực thi nghiệp vụ đặt giá cốt lõi
 						BidResponse bRes = bidService.placeBid(bReq, bReq.getUserId());
 
-						// Gói kết quả để trả về cho Client vừa bấm nút (ẩn loading, báo thành công...)
 						jsonResponse = gson.toJson(bRes);
 
-						// Phát tin (Broadcast) cho mọi client đang xem phiên này
 						if (bRes != null && bRes.isSuccess() && bRes.getBid() != null) {
 							broadcastBid(bReq.getAuctionId(), bRes.getBid(), bRes.getMessage());
 						}
 						break;
 					}
-
-					// ===== Các action hỗ trợ giao diện =====
 
 					case "LIST_AUCTIONS" : {
 						jsonResponse = buildAuctionListJson(auctionService.getAllAuctions());
@@ -373,7 +363,6 @@ public class ClientHandler implements Runnable {
 						break;
 				}
 
-				// Tránh xen kẽ với broadcast trên cùng PrintWriter
 				synchronized (out) {
 					out.println(jsonResponse);
 				}

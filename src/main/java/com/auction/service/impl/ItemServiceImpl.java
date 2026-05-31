@@ -10,7 +10,6 @@ import com.auction.service.ItemService;
 import java.util.List;
 
 public class ItemServiceImpl implements ItemService {
-	// Error messages
 	private static final String ERROR_INVALID_REQUEST = "Yêu cầu không hợp lệ.";
 	private static final String ERROR_NAME_REQUIRED = "Tên sản phẩm bắt buộc.";
 	private static final String ERROR_NAME_TOO_LONG = "Tên sản phẩm quá dài (tối đa 200).";
@@ -19,7 +18,6 @@ public class ItemServiceImpl implements ItemService {
 	private static final String ERROR_SAVE_FAILED = "Lỗi hệ thống, không thể lưu.";
 	private static final String ERROR_DELETE_FAILED = "Không thể xóa sản phẩm.";
 
-	// Success messages
 	private static final String SUCCESS_CREATE = "Tạo sản phẩm thành công.";
 	private static final String SUCCESS_UPDATE = "Cập nhật thành công.";
 	private static final String SUCCESS_DELETE = "Xóa sản phẩm thành công.";
@@ -39,12 +37,9 @@ public class ItemServiceImpl implements ItemService {
 
 		try {
 			request.setSellerId(sellerId);
-			ItemFactory.create(request); // Test category validity
-
-			// ĐÃ SỬA: Lấy ID từ DAO (kiểu Long)
+			ItemFactory.create(request);
 			Long newId = itemDAO.createItem(request);
 			if (newId != null) {
-				// Nhét ID lại vào request để Client nhận được
 				request.setItemId(newId);
 				return new ItemResponse(true, SUCCESS_CREATE, request);
 			}
@@ -76,7 +71,7 @@ public class ItemServiceImpl implements ItemService {
 
 			request.setItemId(itemId);
 			request.setSellerId(sellerId);
-			ItemFactory.create(request); // Check category khi update
+			ItemFactory.create(request);
 
 			boolean result = itemDAO.updateItem(request);
 			if (result) {

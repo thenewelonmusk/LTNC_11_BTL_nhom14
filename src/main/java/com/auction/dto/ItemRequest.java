@@ -6,18 +6,15 @@ public class ItemRequest {
 	private String name;
 	private String description;
 	private double startingPrice;
-	private String type; // ELECTRONICS | ART | VEHICLE
+	private String type;
 	private double currentPrice;
 
-	// Electronics
 	private String deviceBrand;
 	private int warrantMonths;
 
-	// Art
 	private String artist;
 	private int year;
 
-	// Vehicle
 	private String vehicleBrand;
 	private int mileage;
 

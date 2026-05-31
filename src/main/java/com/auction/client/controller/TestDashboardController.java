@@ -72,7 +72,6 @@ public class TestDashboardController {
 			return;
 		}
 
-		// BƯỚC 1: TẠO SẢN PHẨM (SAVE_ITEM)
 		ItemRequest itemReq = new ItemRequest();
 		itemReq.setName(txtItemName.getText());
 		itemReq.setType(cbCategory.getValue());
@@ -90,7 +89,6 @@ public class TestDashboardController {
 				return;
 			}
 
-			// BƯỚC 2: TẠO PHIÊN ĐẤU GIÁ (OPEN_AUCTION)
 			AuctionRequest aucReq = new AuctionRequest();
 			aucReq.setItemId(newItemId);
 			aucReq.setSellerId(uid);

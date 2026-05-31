@@ -31,7 +31,6 @@ public class RegisterUIController {
 
 	@FXML
 	public void initialize() {
-		// Mặc định chọn BIDDER cho người dùng đỡ phải click nhiều
 		cbRole.getSelectionModel().selectFirst();
 	}
 
@@ -51,7 +50,7 @@ public class RegisterUIController {
 			RegisterResponse response = gson.fromJson(responseJson, RegisterResponse.class);
 			if (response.isSuccess()) {
 				showAlert(Alert.AlertType.INFORMATION, "Thành công", response.getMessage());
-				goToLogin(); // Đăng ký xong thì tự chuyển về màn Login
+				goToLogin();
 			} else {
 				showAlert(Alert.AlertType.ERROR, "Lỗi đăng ký", response.getMessage());
 			}
