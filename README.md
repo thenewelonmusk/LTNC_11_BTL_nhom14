@@ -113,7 +113,7 @@ Theo barem đồ án, hệ thống đã xử lý và đạt được các tính 
 ## 7. Tài liệu và Liên kết
 
 * **Báo cáo tổng kết (PDF):** [Xem tại Google Drive](https://drive.google.com/file/d/1myCkzWTOL_62xOK1ZDLG8Mh1yIa2vdyB/view?usp=sharing)
-* **Video Demo Hệ thống:** `[Xem tại Youtube](https://www.youtube.com/watch?v=j7fX-XHUH9o)
+* **Video Demo Hệ thống:** [Xem tại Youtube](https://www.youtube.com/watch?v=j7fX-XHUH9o)
 
 ---
 
