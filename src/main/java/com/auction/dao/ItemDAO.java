@@ -3,6 +3,7 @@ package com.auction.dao;
 import com.auction.dto.ItemRequest;
 import com.auction.model.item.Item;
 import com.auction.model.item.ItemFactory;
+import com.auction.service.impl.ItemServiceImpl;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -128,15 +129,22 @@ public class ItemDAO {
 	}
 
 	private Item mapResultSetToItem(ResultSet rs) throws SQLException {
-		ItemRequest req = new ItemRequest();
-		req.setItemId(rs.getLong("id"));
-		req.setName(rs.getString("name"));
-		req.setType(rs.getString("category"));
-		req.setDescription(rs.getString("description"));
-		req.setStartingPrice(rs.getDouble("starting_price"));
-		req.setCurrentPrice(rs.getDouble("current_price"));
-		req.setSellerId(rs.getLong("seller_id"));
-		return ItemFactory.create(req);
+		String type = rs.getString("category").trim().toUpperCase();
+		ItemFactory itemFactory = ItemServiceImpl.factoryRegistry.get(type);
+
+		if (itemFactory == null) {
+			throw new IllegalArgumentException("Loại tài sản không được hệ thống hỗ trợ: " + type);
+		}
+		Item item = itemFactory.createItem();
+
+		item.setId(rs.getLong("id"));
+		item.setName(rs.getString("name"));
+		item.setDescription(rs.getString("description"));
+		item.setStartingPrice(rs.getDouble("starting_price"));
+		item.setCurrentPrice(rs.getDouble("current_price"));
+		item.setSellerId(rs.getLong("seller_id"));
+
+		return item;
 	}
 
 	public List<Item> getAllItems() {

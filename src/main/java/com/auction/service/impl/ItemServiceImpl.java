@@ -3,11 +3,12 @@ package com.auction.service.impl;
 import com.auction.dao.ItemDAO;
 import com.auction.dto.ItemRequest;
 import com.auction.dto.ItemResponse;
-import com.auction.model.item.Item;
-import com.auction.model.item.ItemFactory;
+import com.auction.model.item.*;
 import com.auction.service.ItemService;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class ItemServiceImpl implements ItemService {
 	private static final String ERROR_INVALID_REQUEST = "Yêu cầu không hợp lệ.";
@@ -17,12 +18,21 @@ public class ItemServiceImpl implements ItemService {
 	private static final String ERROR_NOT_OWNER = "Bạn không phải chủ sản phẩm này.";
 	private static final String ERROR_SAVE_FAILED = "Lỗi hệ thống, không thể lưu.";
 	private static final String ERROR_DELETE_FAILED = "Không thể xóa sản phẩm.";
+	private static final String ERROR_INVALID_ITEM_TYPE = "Loại sản phẩm không hợp lệ";
 
 	private static final String SUCCESS_CREATE = "Tạo sản phẩm thành công.";
 	private static final String SUCCESS_UPDATE = "Cập nhật thành công.";
 	private static final String SUCCESS_DELETE = "Xóa sản phẩm thành công.";
 
 	private final ItemDAO itemDAO;
+
+	public static final Map<String, ItemFactory> factoryRegistry = new HashMap<>();
+
+	static {
+		factoryRegistry.put("ELECTRONICS", new ElectronicsFactory());
+		factoryRegistry.put("ART", new ArtFactory());
+		factoryRegistry.put("VEHICLE", new VehicleFactory());
+	}
 
 	public ItemServiceImpl(ItemDAO itemDAO) {
 		this.itemDAO = itemDAO;
@@ -37,7 +47,20 @@ public class ItemServiceImpl implements ItemService {
 
 		try {
 			request.setSellerId(sellerId);
-			ItemFactory.create(request);
+
+			ItemFactory factory = factoryRegistry.get(request.getType().trim().toUpperCase());
+			if (factory == null) {
+				return new ItemResponse(false, ERROR_INVALID_ITEM_TYPE, null);
+			}
+
+			Item item = factory.createItem();
+
+			item.setName(request.getName());
+			item.setDescription(request.getDescription());
+			item.setStartingPrice(request.getStartingPrice());
+			item.setCurrentPrice(request.getStartingPrice());
+			item.setSellerId(sellerId);
+
 			Long newId = itemDAO.createItem(request);
 			if (newId != null) {
 				request.setItemId(newId);
@@ -69,9 +92,21 @@ public class ItemServiceImpl implements ItemService {
 				return new ItemResponse(false, ERROR_NOT_OWNER, null);
 			}
 
-			request.setItemId(itemId);
-			request.setSellerId(sellerId);
-			ItemFactory.create(request);
+			String type = request.getType().trim().toUpperCase();
+			ItemFactory itemFactory = ItemServiceImpl.factoryRegistry.get(type);
+
+			if (itemFactory == null) {
+				throw new IllegalArgumentException(ERROR_INVALID_ITEM_TYPE + " " + type);
+			}
+			Item item = itemFactory.createItem();
+
+			item.setId(itemId);
+			item.setName(request.getName());
+			item.setDescription(request.getDescription());
+			item.setStartingPrice(request.getStartingPrice());
+			item.setCurrentPrice(request.getStartingPrice());
+			item.setSellerId(sellerId);
+
 
 			boolean result = itemDAO.updateItem(request);
 			if (result) {
